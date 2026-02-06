@@ -109,23 +109,9 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # -----------------------------
-# LEGENDA TOEGEVOEGD
+# LEGENDA (JOUW VERSIE)
 # -----------------------------
-st.markdown("""
-<div style="display: flex; align-items: center; gap: 25px; margin-top: 10px;">
-
-    <div style="display: flex; align-items: center; gap: 6px;">
-        <div style="width: 18px; height: 18px; background-color: green; border: 1px solid black;"></div>
-        <span>Ontvangen meting</span>
-    </div>
-
-    <div style="display: flex; align-items: center; gap: 6px;">
-        <div style="width: 18px; height: 18px; background-color: red; border: 1px solid black;"></div>
-        <span>Ontbrekende meting</span>
-    </div>
-
-</div>
-""", unsafe_allow_html=True)
+st.markdown("**Legenda:** 🟩 Ontvangen meting   |   🟥 Ontbrekende meting")
 
 # -----------------------------
 # 2. QC SAMENVATTING
