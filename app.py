@@ -1,150 +1,79 @@
-import streamlit as st
-import os
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
+import streamlit as st
 
-st.title("AWS QC Dashboard")
+# Combineer Dag + Tijd
+df['Timestamp'] = pd.to_datetime(df['Dag'].astype(str) + ' ' + df['Tijd'].astype(str))
+df = df.sort_values('Timestamp')
 
-# 📁 Detecteer stations (mappen in data/)
-data_path = "data"
-stations = [d for d in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, d))]
+# -----------------------------
+# 1. INTERVAL CHECK (10 MIN)
+# -----------------------------
+df['Interval'] = df['Timestamp'].diff().dt.total_seconds() / 60  # minuten
 
-if not stations:
-    st.warning("Er zijn nog geen stations in de map 'data/'. Voeg eerst data toe.")
-else:
-    station = st.selectbox("Kies een station", stations)
+fig_interval = px.scatter(
+    df,
+    x='Timestamp',
+    y='Interval',
+    color=df['Interval'].apply(lambda x: 'OK' if x == 10 else 'FOUT'),
+    title="Intervalcontrole (10-minuten check)",
+    labels={'Interval': 'Verschil in minuten'}
+)
+fig_interval.add_hline(y=10, line_dash="dot", line_color="green")
 
-    # 📁 Detecteer elementen (Excel-bestanden in station-map)
-    station_path = os.path.join(data_path, station)
-    elementen = [f for f in os.listdir(station_path) if f.endswith(".xlsx")]
+# -----------------------------
+# 2. AANTAL METINGEN PER DAG
+# -----------------------------
+df['Date'] = df['Timestamp'].dt.date
+counts = df.groupby('Date').size().reset_index(name='Aantal')
 
-    if not elementen:
-        st.warning(f"Geen QC-bestanden gevonden voor station: {station}")
-    else:
-        element = st.selectbox("Kies een element", elementen)
-        st.success(f"Je hebt gekozen: {station} – {element}")
+fig_counts = px.bar(
+    counts,
+    x='Date',
+    y='Aantal',
+    title="Aantal metingen per dag",
+    labels={'Aantal': 'Aantal metingen'}
+)
+fig_counts.add_hline(y=144, line_dash="dot", line_color="red")
 
-        # 📊 Laad het bestand
-        file_path = os.path.join(station_path, element)
-        df = pd.read_excel(file_path)
+# -----------------------------
+# 3. TEMPERATUURINTERVALLEN
+# -----------------------------
+bins = [-999, 0, 5, 10, 15, 20, 25, 30, 999]
+labels = ["<0", "0–5", "5–10", "10–15", "15–20", "20–25", "25–30", ">30"]
 
-        st.subheader("Voorbeeld van de ingelezen data")
-        st.write(df.head())
+df['TempInterval'] = pd.cut(df['Raw Value'], bins=bins, labels=labels)
+interval_counts = df['TempInterval'].value_counts().sort_index()
 
-        # 👉 Controleer of kolommen 'Dag' en 'Tijd' bestaan
-        if 'Dag' in df.columns and 'Tijd' in df.columns:
-
-            # Combineer Dag + Tijd tot één datetime kolom
-            df['Timestamp'] = pd.to_datetime(df['Dag'].astype(str) + ' ' + df['Tijd'].astype(str))
-
-            # 👉 RAW VS CLEANED GRAFIEK
-            if 'Raw Value' in df.columns and 'Cleaned Value' in df.columns:
-
-                fig = px.line(
-                    df,
-                    x='Timestamp',
-                    y=['Raw Value', 'Cleaned Value'],
-                    labels={'value': 'Temperatuur (°C)', 'Timestamp': 'Tijd'},
-                    title="Raw vs Cleaned – Temperatuur"
-                )
-                st.plotly_chart(fig)
-
-            else:
-                st.warning("Kolommen 'Raw Value' en/of 'Cleaned Value' ontbreken in dit bestand.")
-
-            # 📊 --- DAGELIJKSE SAMENVATTING ---
-            st.subheader("Dagelijkse samenvatting")
-
-            # Maak een dagkolom
-            df['Date'] = df['Timestamp'].dt.date
-
-            # Bereken daily stats
-            daily_stats = df.groupby('Date').agg({
-                'Raw Value': ['mean', 'min', 'max'],
-                'QC Flag': lambda x: (x != "None").sum()  # aantal QC-fouten
-            })
-
-            # Kolomnamen opschonen
-            daily_stats.columns = ['Mean', 'Min', 'Max', 'QC_Fouten']
-            daily_stats = daily_stats.reset_index()
-
-            st.write("Dagelijkse statistieken", daily_stats)
-
-            # Plot dagelijkse mean + min/max band
-            fig_daily = px.line(
-                daily_stats,
-                x='Date',
-                y='Mean',
-                title="Dagelijkse temperatuur (gemiddelde, min-max band)"
-            )
-
-            # Voeg min-max band toe
-            fig_daily.add_scatter(
-                x=daily_stats['Date'],
-                y=daily_stats['Min'],
-                mode='lines',
-                line=dict(width=0),
-                showlegend=False
-            )
-            fig_daily.add_scatter(
-                x=daily_stats['Date'],
-                y=daily_stats['Max'],
-                mode='lines',
-                fill='tonexty',
-                line=dict(width=0),
-                name='Min-Max band'
-            )
-
-            st.plotly_chart(fig_daily)
-
-            # QC-fouten grafiek
-            fig_qc = px.bar(
-                daily_stats,
-                x='Date',
-                y='QC_Fouten',
-                title="Aantal QC-fouten per dag"
-            )
-            st.plotly_chart(fig_qc)
-
-        else:
-            st.warning("Kolommen 'Dag' en 'Tijd' zijn niet gevonden in dit bestand.")
-            # 📊 --- QC HEATMAP ---
-st.subheader("QC Heatmap (dag vs uur)")
-
-# Maak een uurkolom
-df['Hour'] = df['Timestamp'].dt.hour
-
-# Zet QC Flag om naar numerieke codes
-qc_map = {
-    "None": 0,
-    "OK": 0,
-    "Missing": 1,
-    "Suspect": 2,
-    "Fail": 3
-}
-
-df['QC_Code'] = df['QC Flag'].map(qc_map).fillna(0)
-
-# Maak een pivot table: dagen vs uren
-heatmap_data = df.pivot_table(
-    index=df['Timestamp'].dt.date,
-    columns='Hour',
-    values='QC_Code',
-    aggfunc='max'
+fig_intervals = px.bar(
+    x=interval_counts.index,
+    y=interval_counts.values,
+    title="Verdeling van temperatuurintervallen",
+    labels={'x': 'Interval (°C)', 'y': 'Aantal metingen'}
 )
 
-# Plot heatmap
-fig_heatmap = px.imshow(
-    heatmap_data,
-    labels=dict(x="Uur van de dag", y="Datum", color="QC Code"),
-    title="QC Heatmap (0 = OK, 1 = Missing, 2 = Suspect, 3 = Fail)",
-    aspect="auto",
-    color_continuous_scale=[
-        (0.0, "green"),
-        (0.33, "yellow"),
-        (0.66, "orange"),
-        (1.0, "red")
-    ]
+# -----------------------------
+# 4. HISTOGRAM RAW VALUE
+# -----------------------------
+fig_hist = px.histogram(
+    df,
+    x='Raw Value',
+    nbins=30,
+    title="Histogram van Raw Value"
 )
 
-st.plotly_chart(fig_heatmap)
+# -----------------------------
+# 2×2 GRID LAYOUT
+# -----------------------------
+col1, col2 = st.columns(2)
+with col1:
+    st.plotly_chart(fig_interval, use_container_width=True)
+with col2:
+    st.plotly_chart(fig_counts, use_container_width=True)
+
+col3, col4 = st.columns(2)
+with col3:
+    st.plotly_chart(fig_intervals, use_container_width=True)
+with col4:
+    st.plotly_chart(fig_hist, use_container_width=True)
