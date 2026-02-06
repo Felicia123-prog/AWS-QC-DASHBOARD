@@ -99,7 +99,8 @@ fig_blocks.update_xaxes(
 fig_blocks.update_yaxes(
     tickmode="array",
     tickvals=list(range(24)),
-    ticktext=[f"{h:02d}:00" for h in range(24)]
+    ticktext=[f"{h:02d}:00" for h in range(24)],
+    autorange="reversed"   # DIT DRAAIT DE Y-AS OM
 )
 
 st.plotly_chart(fig_blocks, use_container_width=True)
