@@ -105,9 +105,9 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # -----------------------------
-# 2. SAMENVATTING ONDER DE GRAFIEK
+# 2. QC SAMENVATTING ONDER DE GRAFIEK
 # -----------------------------
-st.subheader("Samenvatting van datakwaliteit")
+st.subheader("QC")
 
 # Berekeningen
 totaal_blokken = 144
@@ -121,10 +121,17 @@ if percentage >= 75:
 else:
     kwaliteit = "Onvoldoende — minder dan 75% datacompleetheid."
 
-# Nieuwe tekst volgens jouw instructie
+# Nieuwe QC-tekst
 st.write("De temperatuur wordt elke 10 minuten gemeten en geregistreerd.")
 st.write("In totaal moeten er **144 metingen** zijn per dag.")
 st.write(f"**Ontbrekende metingen:** {ontbrekend} van de 144.")
 st.write(f"**Datacompleetheid:** {percentage}%.")
 st.write(f"**Kwaliteit:** {kwaliteit}")
 st.write("Minimaal **75%** van de datametingen moet aanwezig zijn om te voldoen aan de kwaliteitsnorm.")
+
+# Extra uitleg over het instrument
+st.write(
+    "Wanneer er veel rode blokken zichtbaar zijn, betekent dit dat het instrument tijdelijk geen gegevens heeft doorgestuurd. "
+    "Dit kan wijzen op een storing in de sensor, een probleem met de voeding, een communicatie‑onderbreking of een fout in de datalogger. "
+    "Hoe groter de datagaten, hoe lager de betrouwbaarheid van de metingen voor die dag."
+)
