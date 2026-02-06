@@ -37,15 +37,25 @@ if 'element' in locals():
         # Combineer Dag + Tijd tot één datetime kolom
         df['Timestamp'] = pd.to_datetime(df['Dag'].astype(str) + ' ' + df['Tijd'].astype(str))
 
-        # Zoek een kolom met temperatuur
-        waardekolommen = [col for col in df.columns if 'value' in col.lower() or 'temp' in col.lower()]
+      # 👉 Controleer of kolommen 'Dag' en 'Tijd' bestaan
+if 'Dag' in df.columns and 'Tijd' in df.columns:
+    # Combineer Dag + Tijd tot één datetime kolom
+    df['Timestamp'] = pd.to_datetime(df['Dag'].astype(str) + ' ' + df['Tijd'].astype(str))
 
-        if waardekolommen:
-            waardekolom = waardekolommen[0]
+    # 👉 Controleer of Raw Value en Cleaned Value bestaan
+    if 'Raw Value' in df.columns and 'Cleaned Value' in df.columns:
 
-            fig = px.line(df, x='Timestamp', y=waardekolom, title="Temperatuur door de tijd")
-            st.plotly_chart(fig)
-        else:
-            st.warning("Geen waarde-kolom gevonden (bijv. Raw Value of Cleaned Value).")
+        fig = px.line(
+            df,
+            x='Timestamp',
+            y=['Raw Value', 'Cleaned Value'],
+            labels={'value': 'Temperatuur (°C)', 'Timestamp': 'Tijd'},
+            title="Raw vs Cleaned – Temperatuur"
+        )
+
+        st.plotly_chart(fig)
+
     else:
-        st.warning("Kolommen 'Dag' en 'Tijd' zijn niet gevonden in dit bestand.")
+        st.warning("Kolommen 'Raw Value' en/of 'Cleaned Value' ontbreken in dit bestand.")
+else:
+    st.warning("Kolommen 'Dag' en 'Tijd' zijn niet gevonden in dit bestand.")
