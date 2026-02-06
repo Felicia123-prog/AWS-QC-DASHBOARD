@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import plotly.graph_objects as go
 
-st.title("AWS QC Dashboard – Temperatuur (Raw Value)")
+st.title("AWS QC Dashboard – Temperatuur & Andere Elementen")
 
 # 📁 Detecteer stations
 data_path = "data"
@@ -33,29 +33,52 @@ df_dag = df[df['Timestamp'].dt.date == gekozen_dag]
 
 st.subheader(f"QC Rapport – {gekozen_dag}")
 
-# -----------------------------
-# 1. CUSTOM BLOCKS TIMELINE
-# -----------------------------
-st.subheader("Ontbrekende metingen voor de dag!")
+# ---------------------------------------------------------
+# ⭐ INTERVAL-DETECTIE (alleen voor NIET-temperatuur)
+# ---------------------------------------------------------
 
-# Verwachte timestamps
+if element == "Air_Temperaturedeg_C_QC.xlsx":
+    # Temperatuur blijft exact zoals jij hem hebt
+    interval_sec = 600   # 10 minuten
+else:
+    # Automatische intervaldetectie voor andere elementen
+    df_sorted = df_dag.sort_values("Timestamp")
+    df_sorted["diff"] = df_sorted["Timestamp"].diff().dt.total_seconds()
+    interval_sec = int(df_sorted["diff"].mode()[0])
+
+# Aantal blokken per uur
+blocks_per_hour = int(3600 / interval_sec)
+
+# ---------------------------------------------------------
+# ⭐ EXPECTED TIMESTAMPS
+# ---------------------------------------------------------
 start = pd.to_datetime(str(gekozen_dag) + " 00:00:00")
-expected_times = pd.date_range(start=start, periods=144, freq="10min")
+end = start + pd.Timedelta(days=1)
+
+expected_times = pd.date_range(
+    start=start,
+    end=end,
+    freq=f"{interval_sec}S",
+    inclusive="left"
+)
 
 df_expected = pd.DataFrame({"Timestamp": expected_times})
 df_expected["Status"] = df_expected["Timestamp"].isin(df_dag["Timestamp"])
 df_expected["Hour"] = df_expected["Timestamp"].dt.hour
-df_expected["Block"] = df_expected["Timestamp"].dt.minute // 10
+df_expected["Block"] = (df_expected["Timestamp"].dt.minute * 60 + df_expected["Timestamp"].dt.second) // interval_sec
 
-# Raster parameters
+# ---------------------------------------------------------
+# ⭐ BLOKJESGRAFIEK
+# ---------------------------------------------------------
+st.subheader("Ontbrekende metingen voor de dag!")
+
 cell_size = 30
 gap = 5
-rows = 6
+rows = blocks_per_hour
 cols = 24
 
 fig = go.Figure()
 
-# Blokjes tekenen
 for _, row in df_expected.iterrows():
     hour = row["Hour"]
     block = row["Block"]
@@ -64,7 +87,7 @@ for _, row in df_expected.iterrows():
     color = "green" if status else "red"
 
     x = hour * (cell_size + gap)
-    y = (5 - block) * (cell_size + gap)
+    y = (rows - 1 - block) * (cell_size + gap)
 
     fig.add_shape(
         type="rect",
@@ -74,12 +97,8 @@ for _, row in df_expected.iterrows():
         fillcolor=color
     )
 
-# As-instellingen (BOLD labels)
 fig.update_xaxes(
     title_text="<b>Uur van de dag</b>",
-    title_font=dict(size=16),
-    tickfont=dict(size=14, color="black"),
-    range=[0, cols * (cell_size + gap)],
     tickmode="array",
     tickvals=[h * (cell_size + gap) + cell_size/2 for h in range(cols)],
     ticktext=[f"<b>{h:02d}:00</b>" for h in range(cols)],
@@ -88,13 +107,10 @@ fig.update_xaxes(
 )
 
 fig.update_yaxes(
-    title_text="<b>10-minuten blok</b>",
-    title_font=dict(size=16),
-    tickfont=dict(size=14, color="black"),
-    range=[0, rows * (cell_size + gap)],
+    title_text="<b>Tijdsblok</b>",
     tickmode="array",
     tickvals=[i * (cell_size + gap) + cell_size/2 for i in range(rows)],
-    ticktext=[f"<b>{t}</b>" for t in ["00", "10", "20", "30", "40", "50"]],
+    ticktext=[f"<b>{i}</b>" for i in range(rows)],
     showgrid=False,
     zeroline=False
 )
@@ -108,29 +124,29 @@ fig.update_layout(
 
 st.plotly_chart(fig, use_container_width=True)
 
-# -----------------------------
-# LEGENDA (JOUW VERSIE)
-# -----------------------------
+# ⭐ LEGENDA
 st.markdown("**Legenda:** 🟩 Ontvangen meting   |   🟥 Ontbrekende meting")
 
-# -----------------------------
-# 2. QC SAMENVATTING
-# -----------------------------
+# ---------------------------------------------------------
+# ⭐ QC SAMENVATTING
+# ---------------------------------------------------------
 st.subheader("QC")
 
-# Berekeningen
-totaal_blokken = 144
+totaal_blokken = len(df_expected)
 aanwezig = df_expected["Status"].sum()
 ontbrekend = totaal_blokken - aanwezig
 percentage = round((aanwezig / totaal_blokken) * 100, 1)
 
-# Kwaliteitslabel
-if percentage >= 75:
-    kwaliteit = "Voldoende — dag voldoet aan de minimale eis."
+# QC-tekst dynamisch
+if element == "Air_Temperaturedeg_C_QC.xlsx":
+    meettekst = "De temperatuur wordt elke 10 minuten gemeten en geregistreerd."
 else:
-    kwaliteit = "Onvoldoende — minder dan 75% datacompleetheid."
+    minuten = interval_sec // 60
+    if minuten >= 60:
+        meettekst = f"Dit element wordt elk uur gemeten en geregistreerd."
+    else:
+        meettekst = f"Dit element wordt elke {minuten} minuten gemeten en geregistreerd."
 
-# QC-tekst in een kader
 qc_html = f"""
 <div style="
     background-color:#f0f2f6;
@@ -139,15 +155,10 @@ qc_html = f"""
     border-left:6px solid #4a90e2;
     font-size:16px;
 ">
-<p>De temperatuur wordt elke 10 minuten gemeten en geregistreerd.</p>
-<p>In totaal moeten er <b>144 metingen</b> zijn per dag.</p>
-<p><b>Ontbrekende metingen:</b> {ontbrekend} van de 144.</p>
+<p>{meettekst}</p>
+<p>In totaal moeten er <b>{totaal_blokken} metingen</b> zijn per dag.</p>
+<p><b>Ontbrekende metingen:</b> {ontbrekend}.</p>
 <p><b>Datacompleetheid:</b> {percentage}%.</p>
-<p><b>Kwaliteit:</b> {kwaliteit}</p>
-<p>Minimaal <b>75%</b> van de datametingen moet aanwezig zijn om te voldoen aan de kwaliteitsnorm.</p>
-<p>Wanneer er veel rode blokken zichtbaar zijn, betekent dit dat het instrument tijdelijk geen gegevens heeft doorgestuurd. 
-Dit kan wijzen op een storing in de sensor, een probleem met de voeding, een communicatie‑onderbreking of een fout in de datalogger. 
-Hoe groter de datagaten, hoe lager de betrouwbaarheid van de metingen voor die dag.</p>
 </div>
 """
 
