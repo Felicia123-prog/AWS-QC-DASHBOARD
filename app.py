@@ -2,7 +2,6 @@ import streamlit as st
 import os
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.express as px
 
 st.title("AWS QC Dashboard – Temperatuur (Raw Value)")
 
@@ -107,51 +106,51 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=False)
 
 # -----------------------------
-# 2. AANTAL METINGEN PER DAG
+# 2. UITLEG EN SAMENVATTING VOOR DE DAG
 # -----------------------------
-st.subheader("Aantal metingen op gekozen dag")
+st.subheader("Samenvatting van datakwaliteit voor deze dag")
 
-aantal = len(df_dag)
+# Berekeningen
+totaal_blokken = 144
+aanwezig = df_expected["Status"].sum()
+ontbrekend = totaal_blokken - aanwezig
+percentage = round((aanwezig / totaal_blokken) * 100, 1)
 
-fig_counts = go.Figure()
-fig_counts.add_trace(go.Bar(x=[str(gekozen_dag)], y=[aantal], name="Aantal metingen"))
-fig_counts.add_hline(y=144, line_dash="dot", line_color="red")
-fig_counts.update_layout(
-    title="Aantal metingen (verwacht: 144)"
-)
+# Uren met gaten
+uren_met_gaten = df_expected[df_expected["Status"] == False]["Hour"].unique()
+uren_met_gaten = sorted(uren_met_gaten)
 
-st.plotly_chart(fig_counts, use_container_width=True)
+# Langste aaneengesloten rode periode
+df_expected["GapGroup"] = (df_expected["Status"] != df_expected["Status"].shift()).cumsum()
+gap_lengths = df_expected[df_expected["Status"] == False].groupby("GapGroup").size()
+langste_gap = int(gap_lengths.max()) if not gap_lengths.empty else 0
+langste_gap_minuten = langste_gap * 10
 
-# -----------------------------
-# 3. TEMPERATUURINTERVALLEN
-# -----------------------------
-st.subheader("Verdeling van temperatuurintervallen")
+# Tekst
+st.write(f"**Totaal aantal verwachte metingen:** 144")
+st.write(f"**Aantal ontvangen metingen:** {aanwezig}")
+st.write(f"**Ontbrekende metingen:** {ontbrekend}")
+st.write(f"**Datacompleetheid:** {percentage}%")
 
-bins = [-999, 0, 5, 10, 15, 20, 25, 30, 999]
-labels = ["<0", "0–5", "5–10", "10–15", "15–20", "20–25", "25–30", ">30"]
+if uren_met_gaten:
+    uren_str = ", ".join([f"{u:02d}:00" for u in uren_met_gaten])
+    st.write(f"**Uren met ontbrekende data:** {uren_str}")
+else:
+    st.write("**Alle uren hebben volledige data.**")
 
-df_dag['TempInterval'] = pd.cut(df_dag['Raw Value'], bins=bins, labels=labels)
-interval_counts = df_dag['TempInterval'].value_counts().sort_index()
+if langste_gap > 0:
+    st.write(f"**Langste aaneengesloten datagap:** {langste_gap_minuten} minuten")
+else:
+    st.write("**Geen aaneengesloten datagaten gevonden.**")
 
-fig_intervals = px.bar(
-    x=interval_counts.index,
-    y=interval_counts.values,
-    labels={'x': 'Interval (°C)', 'y': 'Aantal metingen'},
-    title="Verdeling van temperatuurintervallen"
-)
+# Kwaliteitslabel
+if percentage == 100:
+    kwaliteit = "Uitstekend — geen ontbrekende data."
+elif percentage >= 95:
+    kwaliteit = "Goed — slechts kleine datagaten."
+elif percentage >= 80:
+    kwaliteit = "Matig — merkbare datagaten."
+else:
+    kwaliteit = "Slecht — grote delen van de dag ontbreken."
 
-st.plotly_chart(fig_intervals, use_container_width=True)
-
-# -----------------------------
-# 4. HISTOGRAM RAW VALUE
-# -----------------------------
-st.subheader("Histogram van Raw Value")
-
-fig_hist = px.histogram(
-    df_dag,
-    x='Raw Value',
-    nbins=30,
-    title="Histogram van Raw Value"
-)
-
-st.plotly_chart(fig_hist, use_container_width=True)
+st.write(f"**Kwaliteitsbeoordeling:** {kwaliteit}")
