@@ -35,9 +35,9 @@ df_dag = df[df['Timestamp'].dt.date == gekozen_dag]
 st.subheader(f"QC Rapport – {gekozen_dag}")
 
 # -----------------------------
-# 1. CUSTOM BLOCKS TIMELINE (30x30, strak)
+# 1. CUSTOM BLOCKS TIMELINE (GEDRAAIDE ASSEN + SPATIES)
 # -----------------------------
-st.subheader("Ontbrekende metingen (10-minuten blokjes – custom raster)")
+st.subheader("Ontbrekende metingen (10-minuten blokjes – gedraaide assen)")
 
 # Verwachte timestamps
 start = pd.to_datetime(str(gekozen_dag) + " 00:00:00")
@@ -50,22 +50,23 @@ df_expected["Block"] = df_expected["Timestamp"].dt.minute // 10  # 0 t/m 5
 
 # Raster parameters
 cell_size = 30
-rows = 24
-cols = 6
+gap = 5  # spatie tussen blokjes
+rows = 6   # 10-minuten blokken
+cols = 24  # uren
 
 fig = go.Figure()
 
 # Voeg blokjes toe
 for _, row in df_expected.iterrows():
-    hour = row["Hour"]
-    block = row["Block"]
+    hour = row["Hour"]          # X-as
+    block = row["Block"]        # Y-as
     status = row["Status"]
 
     color = "green" if status else "red"
 
-    # Y-as omgekeerd → 23 bovenaan, 0 onderaan
-    y = (23 - hour) * cell_size
-    x = block * cell_size
+    # Posities met spaties
+    x = hour * (cell_size + gap)
+    y = (5 - block) * (cell_size + gap)  # 00 bovenaan, 50 onderaan
 
     fig.add_shape(
         type="rect",
@@ -77,28 +78,28 @@ for _, row in df_expected.iterrows():
 
 # As-instellingen
 fig.update_xaxes(
-    range=[0, cols * cell_size],
+    range=[0, cols * (cell_size + gap)],
     tickmode="array",
-    tickvals=[i * cell_size + cell_size / 2 for i in range(cols)],
-    ticktext=["00", "10", "20", "30", "40", "50"],
+    tickvals=[h * (cell_size + gap) + cell_size/2 for h in range(cols)],
+    ticktext=[f"{h:02d}:00" for h in range(cols)],
     showgrid=False,
     zeroline=False
 )
 
 fig.update_yaxes(
-    range=[0, rows * cell_size],
+    range=[0, rows * (cell_size + gap)],
     tickmode="array",
-    tickvals=[i * cell_size + cell_size / 2 for i in range(rows)],
-    ticktext=[f"{h:02d}:00" for h in range(23, -1, -1)],
+    tickvals=[i * (cell_size + gap) + cell_size/2 for i in range(rows)],
+    ticktext=["00", "10", "20", "30", "40", "50"],
     showgrid=False,
     zeroline=False
 )
 
 fig.update_layout(
-    width=cols * cell_size + 100,
-    height=rows * cell_size + 100,
+    width=cols * (cell_size + gap) + 200,
+    height=rows * (cell_size + gap) + 200,
     margin=dict(l=40, r=40, t=40, b=40),
-    title="Missing Blocks Timeline (🟥 ontbreekt, 🟩 aanwezig)",
+    title="Missing Blocks Timeline – Gedraaide Assen (🟥 ontbreekt, 🟩 aanwezig)",
     plot_bgcolor="white"
 )
 
