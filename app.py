@@ -36,7 +36,7 @@ st.subheader(f"QC Rapport – {gekozen_dag}")
 # -----------------------------
 # LAYOUT: GRAFIEK LINKS, TEKST RECHTS
 # -----------------------------
-col1, col2 = st.columns([2, 1])   # 2/3 grafiek, 1/3 tekst
+col1, col2 = st.columns([3, 1])   # grafiek krijgt meer ruimte
 
 with col1:
     st.subheader("Ontbrekende metingen voor de dag!")
@@ -48,7 +48,7 @@ with col1:
     df_expected = pd.DataFrame({"Timestamp": expected_times})
     df_expected["Status"] = df_expected["Timestamp"].isin(df_dag["Timestamp"])
     df_expected["Hour"] = df_expected["Timestamp"].dt.hour
-    df_expected["Block"] = df_expected["Timestamp"].dt.minute // 10  # 0 t/m 5
+    df_expected["Block"] = df_expected["Timestamp"].dt.minute // 10
 
     # Raster parameters
     cell_size = 30
@@ -105,7 +105,7 @@ with col1:
         plot_bgcolor="white"
     )
 
-    st.plotly_chart(fig, use_container_width=False)
+    st.plotly_chart(fig, use_container_width=True)
 
 with col2:
     st.subheader("Samenvatting")
@@ -116,37 +116,15 @@ with col2:
     ontbrekend = totaal_blokken - aanwezig
     percentage = round((aanwezig / totaal_blokken) * 100, 1)
 
-    uren_met_gaten = df_expected[df_expected["Status"] == False]["Hour"].unique()
-    uren_met_gaten = sorted(uren_met_gaten)
-
-    df_expected["GapGroup"] = (df_expected["Status"] != df_expected["Status"].shift()).cumsum()
-    gap_lengths = df_expected[df_expected["Status"] == False].groupby("GapGroup").size()
-    langste_gap = int(gap_lengths.max()) if not gap_lengths.empty else 0
-    langste_gap_minuten = langste_gap * 10
-
-    # Tekst
-    st.write(f"**Ontbrekende metingen:** {ontbrekend} van 144")
-    st.write(f"**Datacompleetheid:** {percentage}%")
-
-    if uren_met_gaten:
-        uren_str = ", ".join([f"{u:02d}:00" for u in uren_met_gaten])
-        st.write(f"**Uren met datagaten:** {uren_str}")
-    else:
-        st.write("**Alle uren volledig.**")
-
-    if langste_gap > 0:
-        st.write(f"**Langste datagap:** {langste_gap_minuten} minuten")
-    else:
-        st.write("**Geen aaneengesloten datagaten.**")
-
     # Kwaliteitslabel
-    if percentage == 100:
-        kwaliteit = "Uitstekend — geen ontbrekende data."
-    elif percentage >= 95:
-        kwaliteit = "Goed — slechts kleine datagaten."
-    elif percentage >= 80:
-        kwaliteit = "Matig — merkbare datagaten."
+    if percentage >= 75:
+        kwaliteit = "Voldoende — dag voldoet aan de minimale eis."
     else:
-        kwaliteit = "Slecht — grote delen van de dag ontbreken."
+        kwaliteit = "Onvoldoende — minder dan 75% datacompleetheid."
 
+    # Tekst volgens jouw nieuwe formulering
+    st.write("De temperatuur wordt elke 10 minuten gemeten en geregistreerd.")
+    st.write("In totaal moeten er **144 metingen** zijn per dag.")
+    st.write(f"**Ontbrekende metingen:** {ontbrekend} van de 144.")
+    st.write(f"**Datacompleetheid:** {percentage}%.")
     st.write(f"**Kwaliteit:** {kwaliteit}")
