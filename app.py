@@ -77,6 +77,9 @@ matrix = df_expected.pivot_table(
     aggfunc="max"
 )
 
+# ⭐ DRAAI DE MATRIX OM → 00:00 ONDERAAN
+matrix = matrix.iloc[::-1]
+
 # Plot heatmap met alleen rood/groen
 fig_blocks = px.imshow(
     matrix,
@@ -89,19 +92,18 @@ fig_blocks = px.imshow(
 # Geen 0–1 schaal tonen
 fig_blocks.update_coloraxes(showscale=False)
 
-# Duidelijke ticks
+# X-as labels
 fig_blocks.update_xaxes(
     tickmode="array",
     tickvals=[0,1,2,3,4,5],
     ticktext=["00","10","20","30","40","50"]
 )
 
-# Y-AS OMKEREN → 00:00 ONDERAAN
+# Y-as labels (omgekeerd)
 fig_blocks.update_yaxes(
     tickmode="array",
     tickvals=list(range(24)),
-    ticktext=[f"{h:02d}:00" for h in range(24)],
-    autorange="reversed"
+    ticktext=[f"{h:02d}:00" for h in reversed(range(24))]
 )
 
 st.plotly_chart(fig_blocks, use_container_width=True)
