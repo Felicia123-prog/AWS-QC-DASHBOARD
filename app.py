@@ -1,5 +1,7 @@
 import streamlit as st
 import os
+import pandas as pd
+import plotly.express as px
 
 st.title("AWS QC Dashboard")
 
@@ -21,41 +23,88 @@ else:
     else:
         element = st.selectbox("Kies een element", elementen)
         st.success(f"Je hebt gekozen: {station} – {element}")
-import pandas as pd
-import plotly.express as px
 
-# 📊 Als er een element gekozen is, laad het bestand
-if 'element' in locals():
-    file_path = os.path.join(station_path, element)
-    df = pd.read_excel(file_path)
+        # 📊 Laad het bestand
+        file_path = os.path.join(station_path, element)
+        df = pd.read_excel(file_path)
 
-    st.subheader("Voorbeeld van de ingelezen data")
-    st.write(df.head())
+        st.subheader("Voorbeeld van de ingelezen data")
+        st.write(df.head())
 
-    # 👉 Controleer of kolommen 'Dag' en 'Tijd' bestaan
-    if 'Dag' in df.columns and 'Tijd' in df.columns:
-        # Combineer Dag + Tijd tot één datetime kolom
-        df['Timestamp'] = pd.to_datetime(df['Dag'].astype(str) + ' ' + df['Tijd'].astype(str))
+        # 👉 Controleer of kolommen 'Dag' en 'Tijd' bestaan
+        if 'Dag' in df.columns and 'Tijd' in df.columns:
 
-      # 👉 Controleer of kolommen 'Dag' en 'Tijd' bestaan
-if 'Dag' in df.columns and 'Tijd' in df.columns:
-    # Combineer Dag + Tijd tot één datetime kolom
-    df['Timestamp'] = pd.to_datetime(df['Dag'].astype(str) + ' ' + df['Tijd'].astype(str))
+            # Combineer Dag + Tijd tot één datetime kolom
+            df['Timestamp'] = pd.to_datetime(df['Dag'].astype(str) + ' ' + df['Tijd'].astype(str))
 
-    # 👉 Controleer of Raw Value en Cleaned Value bestaan
-    if 'Raw Value' in df.columns and 'Cleaned Value' in df.columns:
+            # 👉 RAW VS CLEANED GRAFIEK
+            if 'Raw Value' in df.columns and 'Cleaned Value' in df.columns:
 
-        fig = px.line(
-            df,
-            x='Timestamp',
-            y=['Raw Value', 'Cleaned Value'],
-            labels={'value': 'Temperatuur (°C)', 'Timestamp': 'Tijd'},
-            title="Raw vs Cleaned – Temperatuur"
-        )
+                fig = px.line(
+                    df,
+                    x='Timestamp',
+                    y=['Raw Value', 'Cleaned Value'],
+                    labels={'value': 'Temperatuur (°C)', 'Timestamp': 'Tijd'},
+                    title="Raw vs Cleaned – Temperatuur"
+                )
+                st.plotly_chart(fig)
 
-        st.plotly_chart(fig)
+            else:
+                st.warning("Kolommen 'Raw Value' en/of 'Cleaned Value' ontbreken in dit bestand.")
 
-    else:
-        st.warning("Kolommen 'Raw Value' en/of 'Cleaned Value' ontbreken in dit bestand.")
-else:
-    st.warning("Kolommen 'Dag' en 'Tijd' zijn niet gevonden in dit bestand.")
+            # 📊 --- DAGELIJKSE SAMENVATTING ---
+            st.subheader("Dagelijkse samenvatting")
+
+            # Maak een dagkolom
+            df['Date'] = df['Timestamp'].dt.date
+
+            # Bereken daily stats
+            daily_stats = df.groupby('Date').agg({
+                'Raw Value': ['mean', 'min', 'max'],
+                'QC Flag': lambda x: (x != "None").sum()  # aantal QC-fouten
+            })
+
+            # Kolomnamen opschonen
+            daily_stats.columns = ['Mean', 'Min', 'Max', 'QC_Fouten']
+            daily_stats = daily_stats.reset_index()
+
+            st.write("Dagelijkse statistieken", daily_stats)
+
+            # Plot dagelijkse mean + min/max band
+            fig_daily = px.line(
+                daily_stats,
+                x='Date',
+                y='Mean',
+                title="Dagelijkse temperatuur (gemiddelde, min-max band)"
+            )
+
+            # Voeg min-max band toe
+            fig_daily.add_scatter(
+                x=daily_stats['Date'],
+                y=daily_stats['Min'],
+                mode='lines',
+                line=dict(width=0),
+                showlegend=False
+            )
+            fig_daily.add_scatter(
+                x=daily_stats['Date'],
+                y=daily_stats['Max'],
+                mode='lines',
+                fill='tonexty',
+                line=dict(width=0),
+                name='Min-Max band'
+            )
+
+            st.plotly_chart(fig_daily)
+
+            # QC-fouten grafiek
+            fig_qc = px.bar(
+                daily_stats,
+                x='Date',
+                y='QC_Fouten',
+                title="Aantal QC-fouten per dag"
+            )
+            st.plotly_chart(fig_qc)
+
+        else:
+            st.warning("Kolommen 'Dag' en 'Tijd' zijn niet gevonden in dit bestand.")
