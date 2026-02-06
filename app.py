@@ -32,22 +32,20 @@ if 'element' in locals():
     st.subheader("Voorbeeld van de ingelezen data")
     st.write(df.head())
 
-    # Controleer of er een kolom 'Timestamp' bestaat
-    tijdkolommen = [col for col in df.columns if 'time' in col.lower() or 'datum' in col.lower()]
-    
-    if tijdkolommen:
-        tijdkolom = tijdkolommen[0]
-        df[tijdkolom] = pd.to_datetime(df[tijdkolom])
+    # 👉 Controleer of kolommen 'Dag' en 'Tijd' bestaan
+    if 'Dag' in df.columns and 'Tijd' in df.columns:
+        # Combineer Dag + Tijd tot één datetime kolom
+        df['Timestamp'] = pd.to_datetime(df['Dag'].astype(str) + ' ' + df['Tijd'].astype(str))
 
         # Zoek een kolom met temperatuur
-        waardekolommen = [col for col in df.columns if 'temp' in col.lower()]
-        
+        waardekolommen = [col for col in df.columns if 'value' in col.lower() or 'temp' in col.lower()]
+
         if waardekolommen:
             waardekolom = waardekolommen[0]
 
-            fig = px.line(df, x=tijdkolom, y=waardekolom, title="Eerste testgrafiek")
+            fig = px.line(df, x='Timestamp', y=waardekolom, title="Temperatuur door de tijd")
             st.plotly_chart(fig)
         else:
-            st.warning("Geen temperatuurkolom gevonden in dit bestand.")
+            st.warning("Geen waarde-kolom gevonden (bijv. Raw Value of Cleaned Value).")
     else:
-        st.warning("Geen tijdkolom gevonden in dit bestand.")
+        st.warning("Kolommen 'Dag' en 'Tijd' zijn niet gevonden in dit bestand.")
