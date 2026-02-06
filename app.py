@@ -48,9 +48,9 @@ df_dag = df[df['Timestamp'].dt.date == gekozen_dag]
 st.subheader(f"QC Rapport – {gekozen_dag}")
 
 # -----------------------------
-# 1. MISSING TIMELINE (10-MIN CHECK)
+# 1. MISSING BLOCKS TIMELINE (DUIDELIJKE BLOKJES)
 # -----------------------------
-st.subheader("Ontbrekende metingen (10-minuten timeline)")
+st.subheader("Ontbrekende metingen (10-minuten blokjes)")
 
 # Maak alle verwachte tijdstippen voor de gekozen dag
 start = pd.to_datetime(str(gekozen_dag) + " 00:00:00")
@@ -65,27 +65,44 @@ df_expected["Status"] = df_expected["Timestamp"].isin(df_dag["Timestamp"])
 # Zet True/False om naar 1/0
 df_expected["StatusCode"] = df_expected["Status"].apply(lambda x: 1 if x else 0)
 
-# Maak kolommen voor heatmap
+# Uur en 10-minuten index
 df_expected["Hour"] = df_expected["Timestamp"].dt.hour
-df_expected["Minute"] = df_expected["Timestamp"].dt.minute
+df_expected["Block"] = df_expected["Timestamp"].dt.minute // 10  # 0 t/m 5
 
-# Pivot: uren als rijen, minuten als kolommen
-heatmap_data = df_expected.pivot_table(
+# Pivot: 24 rijen (uren) × 6 kolommen (10-min blokjes)
+matrix = df_expected.pivot_table(
     index="Hour",
-    columns="Minute",
+    columns="Block",
     values="StatusCode",
     aggfunc="max"
 )
 
-# Plot heatmap
-fig_missing = px.imshow(
-    heatmap_data,
+# Plot heatmap met alleen rood/groen
+fig_blocks = px.imshow(
+    matrix,
     color_continuous_scale=["red", "green"],
-    labels=dict(x="Minuut", y="Uur", color="Status"),
-    title="Missing Timeline (🟥 ontbreekt, 🟩 aanwezig)"
+    aspect="auto",
+    labels=dict(x="10-minuten blok", y="Uur", color="Status"),
+    title="Missing Blocks Timeline (🟥 ontbreekt, 🟩 aanwezig)"
 )
 
-st.plotly_chart(fig_missing, use_container_width=True)
+# Geen 0–1 schaal tonen
+fig_blocks.update_coloraxes(showscale=False)
+
+# Duidelijke ticks
+fig_blocks.update_xaxes(
+    tickmode="array",
+    tickvals=[0,1,2,3,4,5],
+    ticktext=["00","10","20","30","40","50"]
+)
+
+fig_blocks.update_yaxes(
+    tickmode="array",
+    tickvals=list(range(24)),
+    ticktext=[f"{h:02d}:00" for h in range(24)]
+)
+
+st.plotly_chart(fig_blocks, use_container_width=True)
 
 # -----------------------------
 # 2. AANTAL METINGEN PER DAG
