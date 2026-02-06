@@ -48,33 +48,64 @@ df_dag = df[df['Timestamp'].dt.date == gekozen_dag]
 st.subheader(f"QC Rapport – {gekozen_dag}")
 
 # -----------------------------
-# 1. INTERVAL CHECK (10 MIN)
+# 1. MISSING TIMELINE (10-MIN CHECK)
 # -----------------------------
-df_dag['Interval'] = df_dag['Timestamp'].diff().dt.total_seconds() / 60
+st.subheader("Ontbrekende metingen (10-minuten timeline)")
 
-fig_interval = px.scatter(
-    df_dag,
-    x='Timestamp',
-    y='Interval',
-    color=df_dag['Interval'].apply(lambda x: 'OK' if x == 10 else 'FOUT'),
-    title="Intervalcontrole (10-minuten check)",
-    labels={'Interval': 'Verschil in minuten'}
+# Maak alle verwachte tijdstippen voor de gekozen dag
+start = pd.to_datetime(str(gekozen_dag) + " 00:00:00")
+expected_times = pd.date_range(start=start, periods=144, freq="10min")
+
+# Dataframe met expected timestamps
+df_expected = pd.DataFrame({"Timestamp": expected_times})
+
+# Markeer of de meting bestaat
+df_expected["Status"] = df_expected["Timestamp"].isin(df_dag["Timestamp"])
+
+# Zet True/False om naar 1/0
+df_expected["StatusCode"] = df_expected["Status"].apply(lambda x: 1 if x else 0)
+
+# Maak kolommen voor heatmap
+df_expected["Hour"] = df_expected["Timestamp"].dt.hour
+df_expected["Minute"] = df_expected["Timestamp"].dt.minute
+
+# Pivot: uren als rijen, minuten als kolommen
+heatmap_data = df_expected.pivot_table(
+    index="Hour",
+    columns="Minute",
+    values="StatusCode",
+    aggfunc="max"
 )
-fig_interval.add_hline(y=10, line_dash="dot", line_color="green")
+
+# Plot heatmap
+fig_missing = px.imshow(
+    heatmap_data,
+    color_continuous_scale=["red", "green"],
+    labels=dict(x="Minuut", y="Uur", color="Status"),
+    title="Missing Timeline (🟥 ontbreekt, 🟩 aanwezig)"
+)
+
+st.plotly_chart(fig_missing, use_container_width=True)
 
 # -----------------------------
 # 2. AANTAL METINGEN PER DAG
 # -----------------------------
+st.subheader("Aantal metingen op gekozen dag")
+
 aantal = len(df_dag)
 
 fig_counts = go.Figure()
 fig_counts.add_trace(go.Bar(x=[str(gekozen_dag)], y=[aantal], name="Aantal metingen"))
 fig_counts.add_hline(y=144, line_dash="dot", line_color="red")
-fig_counts.update_layout(title="Aantal metingen op gekozen dag")
+fig_counts.update_layout(title="Aantal metingen (verwacht: 144)")
+
+st.plotly_chart(fig_counts, use_container_width=True)
 
 # -----------------------------
 # 3. TEMPERATUURINTERVALLEN
 # -----------------------------
+st.subheader("Verdeling van temperatuurintervallen")
+
 bins = [-999, 0, 5, 10, 15, 20, 25, 30, 999]
 labels = ["<0", "0–5", "5–10", "10–15", "15–20", "20–25", "25–30", ">30"]
 
@@ -88,9 +119,13 @@ fig_intervals = px.bar(
     labels={'x': 'Interval (°C)', 'y': 'Aantal metingen'}
 )
 
+st.plotly_chart(fig_intervals, use_container_width=True)
+
 # -----------------------------
 # 4. HISTOGRAM RAW VALUE
 # -----------------------------
+st.subheader("Histogram van Raw Value")
+
 fig_hist = px.histogram(
     df_dag,
     x='Raw Value',
@@ -98,17 +133,4 @@ fig_hist = px.histogram(
     title="Histogram van Raw Value"
 )
 
-# -----------------------------
-# 2×2 GRID LAYOUT
-# -----------------------------
-col1, col2 = st.columns(2)
-with col1:
-    st.plotly_chart(fig_interval, use_container_width=True)
-with col2:
-    st.plotly_chart(fig_counts, use_container_width=True)
-
-col3, col4 = st.columns(2)
-with col3:
-    st.plotly_chart(fig_intervals, use_container_width=True)
-with col4:
-    st.plotly_chart(fig_hist, use_container_width=True)
+st.plotly_chart(fig_hist, use_container_width=True)
