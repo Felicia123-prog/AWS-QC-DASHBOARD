@@ -78,6 +78,7 @@ for _, row in df_expected.iterrows():
 
 # As-instellingen
 fig.update_xaxes(
+    title_text="Uur van de dag",
     range=[0, cols * (cell_size + gap)],
     tickmode="array",
     tickvals=[h * (cell_size + gap) + cell_size/2 for h in range(cols)],
@@ -87,6 +88,7 @@ fig.update_xaxes(
 )
 
 fig.update_yaxes(
+    title_text="10-minuten blok",
     range=[0, rows * (cell_size + gap)],
     tickmode="array",
     tickvals=[i * (cell_size + gap) + cell_size/2 for i in range(rows)],
@@ -98,8 +100,8 @@ fig.update_yaxes(
 fig.update_layout(
     width=cols * (cell_size + gap) + 200,
     height=rows * (cell_size + gap) + 200,
-    margin=dict(l=40, r=40, t=40, b=40),
-    title="Missing Blocks Timeline – Gedraaide Assen (🟥 ontbreekt, 🟩 aanwezig)",
+    margin=dict(l=80, r=40, t=60, b=80),
+    title="Ontbrekende metingen voor de dag!",
     plot_bgcolor="white"
 )
 
