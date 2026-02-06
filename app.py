@@ -1,8 +1,8 @@
 import streamlit as st
 import os
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
+import plotly.express as px
 
 st.title("AWS QC Dashboard – Temperatuur (Raw Value)")
 
@@ -10,30 +10,17 @@ st.title("AWS QC Dashboard – Temperatuur (Raw Value)")
 data_path = "data"
 stations = [d for d in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, d))]
 
-if not stations:
-    st.warning("Geen stations gevonden in de map 'data/'.")
-    st.stop()
-
 station = st.selectbox("Kies een station", stations)
 
 # 📁 Detecteer elementen
 station_path = os.path.join(data_path, station)
 elementen = [f for f in os.listdir(station_path) if f.endswith(".xlsx")]
 
-if not elementen:
-    st.warning(f"Geen bestanden gevonden voor station: {station}")
-    st.stop()
-
 element = st.selectbox("Kies een element", elementen)
 
 # 📄 Laad bestand
 file_path = os.path.join(station_path, element)
 df = pd.read_excel(file_path)
-
-# Controleer kolommen
-if not {'Dag', 'Tijd', 'Raw Value'}.issubset(df.columns):
-    st.error("Bestand mist één van de vereiste kolommen: Dag, Tijd, Raw Value")
-    st.stop()
 
 # Combineer Dag + Tijd
 df['Timestamp'] = pd.to_datetime(df['Dag'].astype(str) + ' ' + df['Tijd'].astype(str))
@@ -48,65 +35,74 @@ df_dag = df[df['Timestamp'].dt.date == gekozen_dag]
 st.subheader(f"QC Rapport – {gekozen_dag}")
 
 # -----------------------------
-# 1. MISSING BLOCKS TIMELINE (DUIDELIJKE BLOKJES)
+# 1. CUSTOM BLOCKS TIMELINE (30x30, strak)
 # -----------------------------
-st.subheader("Ontbrekende metingen (10-minuten blokjes)")
+st.subheader("Ontbrekende metingen (10-minuten blokjes – custom raster)")
 
-# Maak alle verwachte tijdstippen voor de gekozen dag
+# Verwachte timestamps
 start = pd.to_datetime(str(gekozen_dag) + " 00:00:00")
 expected_times = pd.date_range(start=start, periods=144, freq="10min")
 
-# Dataframe met expected timestamps
 df_expected = pd.DataFrame({"Timestamp": expected_times})
-
-# Markeer of de meting bestaat
 df_expected["Status"] = df_expected["Timestamp"].isin(df_dag["Timestamp"])
-
-# Zet True/False om naar 1/0
-df_expected["StatusCode"] = df_expected["Status"].apply(lambda x: 1 if x else 0)
-
-# Uur en 10-minuten index
 df_expected["Hour"] = df_expected["Timestamp"].dt.hour
 df_expected["Block"] = df_expected["Timestamp"].dt.minute // 10  # 0 t/m 5
 
-# Pivot: 24 rijen (uren) × 6 kolommen (10-min blokjes)
-matrix = df_expected.pivot_table(
-    index="Hour",
-    columns="Block",
-    values="StatusCode",
-    aggfunc="max"
-)
+# Raster parameters
+cell_size = 30
+rows = 24
+cols = 6
 
-# ⭐ DRAAI DE MATRIX OM → 00:00 ONDERAAN
-matrix = matrix.iloc[::-1]
+fig = go.Figure()
 
-# Plot heatmap met alleen rood/groen
-fig_blocks = px.imshow(
-    matrix,
-    color_continuous_scale=["red", "green"],
-    aspect="auto",
-    labels=dict(x="10-minuten blok", y="Uur", color="Status"),
-    title="Missing Blocks Timeline (🟥 ontbreekt, 🟩 aanwezig)"
-)
+# Voeg blokjes toe
+for _, row in df_expected.iterrows():
+    hour = row["Hour"]
+    block = row["Block"]
+    status = row["Status"]
 
-# Geen 0–1 schaal tonen
-fig_blocks.update_coloraxes(showscale=False)
+    color = "green" if status else "red"
 
-# X-as labels
-fig_blocks.update_xaxes(
+    # Y-as omgekeerd → 23 bovenaan, 0 onderaan
+    y = (23 - hour) * cell_size
+    x = block * cell_size
+
+    fig.add_shape(
+        type="rect",
+        x0=x, x1=x + cell_size,
+        y0=y, y1=y + cell_size,
+        line=dict(width=0),
+        fillcolor=color
+    )
+
+# As-instellingen
+fig.update_xaxes(
+    range=[0, cols * cell_size],
     tickmode="array",
-    tickvals=[0,1,2,3,4,5],
-    ticktext=["00","10","20","30","40","50"]
+    tickvals=[i * cell_size + cell_size / 2 for i in range(cols)],
+    ticktext=["00", "10", "20", "30", "40", "50"],
+    showgrid=False,
+    zeroline=False
 )
 
-# Y-as labels (omgekeerd)
-fig_blocks.update_yaxes(
+fig.update_yaxes(
+    range=[0, rows * cell_size],
     tickmode="array",
-    tickvals=list(range(24)),
-    ticktext=[f"{h:02d}:00" for h in reversed(range(24))]
+    tickvals=[i * cell_size + cell_size / 2 for i in range(rows)],
+    ticktext=[f"{h:02d}:00" for h in range(23, -1, -1)],
+    showgrid=False,
+    zeroline=False
 )
 
-st.plotly_chart(fig_blocks, use_container_width=True)
+fig.update_layout(
+    width=cols * cell_size + 100,
+    height=rows * cell_size + 100,
+    margin=dict(l=40, r=40, t=40, b=40),
+    title="Missing Blocks Timeline (🟥 ontbreekt, 🟩 aanwezig)",
+    plot_bgcolor="white"
+)
+
+st.plotly_chart(fig, use_container_width=False)
 
 # -----------------------------
 # 2. AANTAL METINGEN PER DAG
