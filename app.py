@@ -37,7 +37,7 @@ st.subheader(f"QC Rapport – {gekozen_dag}")
 # -----------------------------
 # 1. CUSTOM BLOCKS TIMELINE (GEDRAAIDE ASSEN + SPATIES)
 # -----------------------------
-st.subheader("Ontbrekende metingen (10-minuten blokjes – gedraaide assen)")
+st.subheader("Ontbrekende metingen voor de dag!")
 
 # Verwachte timestamps
 start = pd.to_datetime(str(gekozen_dag) + " 00:00:00")
@@ -101,7 +101,6 @@ fig.update_layout(
     width=cols * (cell_size + gap) + 200,
     height=rows * (cell_size + gap) + 200,
     margin=dict(l=80, r=40, t=60, b=80),
-    title="Ontbrekende metingen voor de dag!",
     plot_bgcolor="white"
 )
 
@@ -117,7 +116,9 @@ aantal = len(df_dag)
 fig_counts = go.Figure()
 fig_counts.add_trace(go.Bar(x=[str(gekozen_dag)], y=[aantal], name="Aantal metingen"))
 fig_counts.add_hline(y=144, line_dash="dot", line_color="red")
-fig_counts.update_layout(title="Aantal metingen (verwacht: 144)")
+fig_counts.update_layout(
+    title="Aantal metingen (verwacht: 144)"
+)
 
 st.plotly_chart(fig_counts, use_container_width=True)
 
@@ -135,8 +136,8 @@ interval_counts = df_dag['TempInterval'].value_counts().sort_index()
 fig_intervals = px.bar(
     x=interval_counts.index,
     y=interval_counts.values,
-    title="Verdeling van temperatuurintervallen",
-    labels={'x': 'Interval (°C)', 'y': 'Aantal metingen'}
+    labels={'x': 'Interval (°C)', 'y': 'Aantal metingen'},
+    title="Verdeling van temperatuurintervallen"
 )
 
 st.plotly_chart(fig_intervals, use_container_width=True)
