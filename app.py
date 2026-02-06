@@ -108,3 +108,43 @@ else:
 
         else:
             st.warning("Kolommen 'Dag' en 'Tijd' zijn niet gevonden in dit bestand.")
+            # 📊 --- QC HEATMAP ---
+st.subheader("QC Heatmap (dag vs uur)")
+
+# Maak een uurkolom
+df['Hour'] = df['Timestamp'].dt.hour
+
+# Zet QC Flag om naar numerieke codes
+qc_map = {
+    "None": 0,
+    "OK": 0,
+    "Missing": 1,
+    "Suspect": 2,
+    "Fail": 3
+}
+
+df['QC_Code'] = df['QC Flag'].map(qc_map).fillna(0)
+
+# Maak een pivot table: dagen vs uren
+heatmap_data = df.pivot_table(
+    index=df['Timestamp'].dt.date,
+    columns='Hour',
+    values='QC_Code',
+    aggfunc='max'
+)
+
+# Plot heatmap
+fig_heatmap = px.imshow(
+    heatmap_data,
+    labels=dict(x="Uur van de dag", y="Datum", color="QC Code"),
+    title="QC Heatmap (0 = OK, 1 = Missing, 2 = Suspect, 3 = Fail)",
+    aspect="auto",
+    color_continuous_scale=[
+        (0.0, "green"),
+        (0.33, "yellow"),
+        (0.66, "orange"),
+        (1.0, "red")
+    ]
+)
+
+st.plotly_chart(fig_heatmap)
