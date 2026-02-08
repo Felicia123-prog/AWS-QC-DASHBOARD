@@ -153,7 +153,7 @@ st.markdown(qc_html, unsafe_allow_html=True)
 # 3. MAANDOVERZICHT QC – TEMPERATUUR
 # ---------------------------------------------------------
 
-import calendar  # <-- moet helemaal bovenaan staan
+import calendar  # <-- MOET HIER STAAN, BOVEN ALLES
 
 # Alle unieke dagen in de dataset
 alle_dagen = sorted(df['Timestamp'].dt.date.unique())
