@@ -154,8 +154,30 @@ st.markdown(qc_html, unsafe_allow_html=True)
 # 3. MAANDOVERZICHT QC – TEMPERATUUR
 # ---------------------------------------------------------
 
-st.subheader("Maandelijkse QC – Temperatuur")
+# Bepaal maand en jaar uit de data
+eerste_dag = alle_dagen[0]
+maandnaam = eerste_dag.strftime("%B")  # Geeft 'January'
+jaar = eerste_dag.year
 
+# Nederlandse maandnaam
+maanden_nl = {
+    "January": "Januari",
+    "February": "Februari",
+    "March": "Maart",
+    "April": "April",
+    "May": "Mei",
+    "June": "Juni",
+    "July": "Juli",
+    "August": "Augustus",
+    "September": "September",
+    "October": "Oktober",
+    "November": "November",
+    "December": "December"
+}
+
+maand_nl = maanden_nl[maandnaam]
+
+st.subheader(f"MAAND QC van {maand_nl} {jaar}")
 # Alle unieke dagen in de dataset
 alle_dagen = sorted(df['Timestamp'].dt.date.unique())
 
