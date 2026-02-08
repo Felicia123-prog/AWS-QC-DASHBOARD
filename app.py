@@ -253,6 +253,11 @@ fig2.update_layout(
 st.plotly_chart(fig2, use_container_width=True)
 
 # -----------------------------
+# LEGENDA VOOR MAAND-QC
+# -----------------------------
+st.markdown("**Legenda:** 🟩 Geschikte dag (≥75% compleet)   |   🟥 Ongeschikte dag (<75% compleet)")
+
+# -----------------------------
 # SAMENVATTING
 # -----------------------------
 
