@@ -257,6 +257,19 @@ st.plotly_chart(fig2, use_container_width=True)
 # -----------------------------
 st.markdown("**Legenda:** 🟩 Geschikte dag (≥75% compleet)   |   🟥 Ongeschikte dag (<75% compleet)")
 
+# Bepaal totaal aantal dagen in de maand
+eerste_dag = alle_dagen[0]
+maand = eerste_dag.month
+jaar = eerste_dag.year
+
+import calendar
+totaal_dagen_in_maand = calendar.monthrange(jaar, maand)[1]
+
+# Aantal dagen met data
+dagen_met_data = len(alle_dagen)
+
+# Ontbrekende dagen
+ontbrekende_dagen = totaal_dagen_in_maand - dagen_met_data
 # -----------------------------
 # SAMENVATTING
 # -----------------------------
