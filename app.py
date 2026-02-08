@@ -11,14 +11,11 @@ stations = [d for d in os.listdir(data_path) if os.path.isdir(os.path.join(data_
 
 station = st.selectbox("Kies een station", stations)
 
-# 📁 Detecteer elementen
+# 📄 Automatisch temperatuur-bestand kiezen
 station_path = os.path.join(data_path, station)
-elementen = [f for f in os.listdir(station_path) if f.endswith(".xlsx")]
+temp_file = "Air_Temperaturedeg_C_QC.xlsx"
+file_path = os.path.join(station_path, temp_file)
 
-element = st.selectbox("Kies een element", elementen)
-
-# 📄 Laad bestand
-file_path = os.path.join(station_path, element)
 df = pd.read_excel(file_path)
 
 # Combineer Dag + Tijd
@@ -109,7 +106,7 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # -----------------------------
-# LEGENDA (JOUW VERSIE)
+# LEGENDA
 # -----------------------------
 st.markdown("**Legenda:** 🟩 Ontvangen meting   |   🟥 Ontbrekende meting")
 
