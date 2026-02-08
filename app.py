@@ -148,9 +148,12 @@ Hoe groter de datagaten, hoe lager de betrouwbaarheid van de metingen voor die d
 </div>
 """
 st.markdown(qc_html, unsafe_allow_html=True)
+
 # ---------------------------------------------------------
 # 3. MAANDOVERZICHT QC – TEMPERATUUR
 # ---------------------------------------------------------
+
+import calendar  # <-- BELANGRIJK: moet helemaal bovenaan staan
 
 # Alle unieke dagen in de dataset
 alle_dagen = sorted(df['Timestamp'].dt.date.unique())
@@ -259,7 +262,6 @@ st.markdown("**Legenda:** 🟩 Geschikte dag (≥75% compleet)   |   🟥 Ongesc
 # -----------------------------
 # BEREKENING VAN DAGEN IN MAAND
 # -----------------------------
-import calendar
 
 totaal_dagen_in_maand = calendar.monthrange(jaar, maand)[1]
 dagen_met_data = len(alle_dagen)
