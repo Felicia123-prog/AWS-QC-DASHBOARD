@@ -153,14 +153,14 @@ st.markdown(qc_html, unsafe_allow_html=True)
 # 3. MAANDOVERZICHT QC – TEMPERATUUR
 # ---------------------------------------------------------
 
-import calendar  # <-- BELANGRIJK: moet helemaal bovenaan staan
+import calendar  # <-- moet helemaal bovenaan staan
 
 # Alle unieke dagen in de dataset
 alle_dagen = sorted(df['Timestamp'].dt.date.unique())
 
 # Bepaal maand en jaar uit de data
 eerste_dag = alle_dagen[0]
-maandnaam = eerste_dag.strftime("%B")  # Geeft 'January'
+maandnaam = eerste_dag.strftime("%B")
 jaar = eerste_dag.year
 
 # Nederlandse maandnaam
@@ -188,8 +188,7 @@ qc_resultaten = []
 for dag in alle_dagen:
     df_dag = df[df['Timestamp'].dt.date == dag]
 
-    # Verwachte 144 metingen
-    totaal = 144
+    totaal = 144  # Verwachte metingen
     aanwezig = len(df_dag)
     percentage = round((aanwezig / totaal) * 100, 1)
 
@@ -227,7 +226,6 @@ for i, row in qc_df.iterrows():
         fillcolor=kleur
     )
 
-    # Dagnummer tonen
     fig2.add_annotation(
         x=x0 + cell_size/2,
         y=cell_size/2,
@@ -236,15 +234,8 @@ for i, row in qc_df.iterrows():
         font=dict(color="white", size=14)
     )
 
-fig2.update_xaxes(
-    visible=False,
-    range=[0, len(qc_df) * (cell_size + gap)]
-)
-
-fig2.update_yaxes(
-    visible=False,
-    range=[0, cell_size]
-)
+fig2.update_xaxes(visible=False, range=[0, len(qc_df) * (cell_size + gap)])
+fig2.update_yaxes(visible=False, range=[0, cell_size])
 
 fig2.update_layout(
     height=150,
@@ -255,7 +246,7 @@ fig2.update_layout(
 st.plotly_chart(fig2, use_container_width=True)
 
 # -----------------------------
-# LEGENDA VOOR MAAND-QC
+# LEGENDA
 # -----------------------------
 st.markdown("**Legenda:** 🟩 Geschikte dag (≥75% compleet)   |   🟥 Ongeschikte dag (<75% compleet)")
 
