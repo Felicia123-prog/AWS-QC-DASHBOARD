@@ -147,12 +147,13 @@ Dit kan wijzen op een storing in de sensor, een probleem met de voeding, een com
 Hoe groter de datagaten, hoe lager de betrouwbaarheid van de metingen voor die dag.</p>
 </div>
 """
-
 st.markdown(qc_html, unsafe_allow_html=True)
-
 # ---------------------------------------------------------
 # 3. MAANDOVERZICHT QC – TEMPERATUUR
 # ---------------------------------------------------------
+
+# Alle unieke dagen in de dataset
+alle_dagen = sorted(df['Timestamp'].dt.date.unique())
 
 # Bepaal maand en jaar uit de data
 eerste_dag = alle_dagen[0]
@@ -178,8 +179,6 @@ maanden_nl = {
 maand_nl = maanden_nl[maandnaam]
 
 st.subheader(f"MAAND QC van {maand_nl} {jaar}")
-# Alle unieke dagen in de dataset
-alle_dagen = sorted(df['Timestamp'].dt.date.unique())
 
 qc_resultaten = []
 
@@ -257,19 +256,15 @@ st.plotly_chart(fig2, use_container_width=True)
 # -----------------------------
 st.markdown("**Legenda:** 🟩 Geschikte dag (≥75% compleet)   |   🟥 Ongeschikte dag (<75% compleet)")
 
-# Bepaal totaal aantal dagen in de maand
-eerste_dag = alle_dagen[0]
-maand = eerste_dag.month
-jaar = eerste_dag.year
-
+# -----------------------------
+# BEREKENING VAN DAGEN IN MAAND
+# -----------------------------
 import calendar
+
 totaal_dagen_in_maand = calendar.monthrange(jaar, maand)[1]
-
-# Aantal dagen met data
 dagen_met_data = len(alle_dagen)
-
-# Ontbrekende dagen
 ontbrekende_dagen = totaal_dagen_in_maand - dagen_met_data
+
 # -----------------------------
 # SAMENVATTING
 # -----------------------------
@@ -281,5 +276,6 @@ st.markdown(f"""
 ### Samenvatting maand
 - **Geschikte dagen (≥75% compleet):** {goede_dagen}  
 - **Ongeschikte dagen (<75% compleet):** {slechte_dagen}  
-- **Totaal aantal dagen:** {len(qc_df)}
+- **Aantal dagen met data:** {dagen_met_data} van de {totaal_dagen_in_maand}  
+- **Ontbrekende dagen:** {ontbrekende_dagen}  
 """)
