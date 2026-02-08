@@ -154,7 +154,7 @@ st.markdown(qc_html, unsafe_allow_html=True)
 # 3. MAANDOVERZICHT QC – TEMPERATUUR
 # ---------------------------------------------------------
 
-import calendar  # <-- MOET HIER STAAN, BOVEN ALLES
+import calendar  # <-- moet bovenaan
 
 # Alle unieke dagen in de dataset
 alle_dagen = sorted(df['Timestamp'].dt.date.unique())
@@ -189,7 +189,7 @@ qc_resultaten = []
 for dag in alle_dagen:
     df_dag = df[df['Timestamp'].dt.date == dag]
 
-    totaal = 144  # Verwachte metingen
+    totaal = 144
     aanwezig = len(df_dag)
     percentage = round((aanwezig / totaal) * 100, 1)
 
