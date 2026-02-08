@@ -63,7 +63,7 @@ for _, row in df_expected.iterrows():
 
     x = hour * (cell_size + gap)
     y = (5 - block) * (cell_size + gap)
-
+        
     fig.add_shape(
         type="rect",
         x0=x, x1=x + cell_size,
