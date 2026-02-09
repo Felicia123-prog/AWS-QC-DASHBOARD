@@ -464,12 +464,24 @@ df_maand = df[
 df_maand = df_maand[df_maand["Raw Value"].notna()]
 
 if not df_maand.empty:
-    laagste_maand = round(df_maand["Raw Value"].min(), 1)
+
+    # 1️⃣ Tel negatieve waarden
+    negatieve_count = (df_maand["Raw Value"] < 0).sum()
+
+    # 2️⃣ Filter negatieve waarden eruit voor laagste geldige waarde
+    df_maand_pos = df_maand[df_maand["Raw Value"] >= 0]
+
+    if not df_maand_pos.empty:
+        laagste_maand = round(df_maand_pos["Raw Value"].min(), 1)
+    else:
+        laagste_maand = None  # geen geldige waarden
+
     hoogste_maand = round(df_maand["Raw Value"].max(), 1)
 
     st.markdown(f"""
     ### Maandstatistieken ({gekozen_dag.strftime('%B %Y')})
-    - **Laagste waarde in de maand:** {laagste_maand}°C  
+    - **Aantal negatieve waarden:** {negatieve_count}  
+    - **Laagste geldige waarde in de maand:** {laagste_maand if laagste_maand is not None else "Geen geldige waarden"}°C  
     - **Hoogste waarde in de maand:** {hoogste_maand}°C  
     """)
 
@@ -480,26 +492,32 @@ if not df_maand.empty:
 
 if not df_maand.empty:
 
-    problemen = []  # we verzamelen alle fouten
+    problemen = []
+
+    # ❌ Negatieve waarden
+    if negatieve_count > 0:
+        problemen.append(
+            f"Er zijn {negatieve_count} negatieve waarden gevonden, wat fysiek onmogelijk is."
+        )
 
     # ❌ Onrealistisch hoge minimumtemperatuur
-    if laagste_maand > 30:
+    if laagste_maand is not None and laagste_maand > 30:
         problemen.append(
-            "De laagste waarde van de maand ligt boven 30°C, wat onrealistisch is voor een minimumtemperatuur in Suriname."
+            "De laagste geldige waarde ligt boven 30°C, wat onrealistisch is voor Suriname."
         )
 
-    # ❌ Onrealistisch lage minimumtemperatuur
-    if laagste_maand < 5:
+    # ❌ Onrealistisch lage minimumtemperatuur (na filtering)
+    if laagste_maand is not None and laagste_maand < 5:
         problemen.append(
-            "De maand bevat waarden onder 5°C, wat fysiek onmogelijk is voor Suriname."
+            "De laagste geldige waarde ligt onder 5°C, wat fysiek onmogelijk is."
         )
-    elif laagste_maand < 10:
+    elif laagste_maand is not None and laagste_maand < 10:
         problemen.append(
-            "De maand bevat zeer onrealistische lage waarden (<10°C)."
+            "De laagste geldige waarde ligt onder 10°C, wat zeer onrealistisch is."
         )
-    elif laagste_maand < 20:
+    elif laagste_maand is not None and laagste_maand < 20:
         problemen.append(
-            "De maand bevat lage waarden (<20°C) die niet typisch zijn voor Suriname."
+            "De laagste geldige waarde ligt onder 20°C, wat niet typisch is voor Suriname."
         )
 
     # ❌ Onrealistisch hoge maximumtemperatuur
@@ -516,7 +534,7 @@ if not df_maand.empty:
             "De maand bevat zeer hoge waarden (>37°C)."
         )
 
-    # ⭐ Bouw de conclusie op basis van alle gevonden problemen
+    # ⭐ Bouw conclusie
     if problemen:
         maand_conclusie = "❌ Het station is NIET geschikt voor deze maand.\n\n" + "\n".join(
             f"- {p}" for p in problemen
