@@ -454,6 +454,31 @@ st.markdown(f"""
 - **Aantal VERY_HIGH:** {qc_counts.get('VERY_HIGH', 0)}  
 """)
 
+# ---------------------------------------------------------
+# ⭐ 11. MAANDSTATISTIEKEN – AUTOMATISCH OP BASIS VAN GEKOZEN DAG
+# ---------------------------------------------------------
+
+maand = gekozen_dag.month
+jaar = gekozen_dag.year
+
+df_maand = df[
+    (df["Timestamp"].dt.month == maand) &
+    (df["Timestamp"].dt.year == jaar)
+].copy()
+
+# Alleen echte waarden
+df_maand = df_maand[df_maand["Raw Value"].notna()]
+
+if not df_maand.empty:
+    laagste_maand = round(df_maand["Raw Value"].min(), 1)
+    hoogste_maand = round(df_maand["Raw Value"].max(), 1)
+
+    st.markdown(f"""
+    ### Maandstatistieken ({gekozen_dag.strftime('%B %Y')})
+    - **Laagste waarde in de maand:** {laagste_maand}°C  
+    - **Hoogste waarde in de maand:** {hoogste_maand}°C  
+    """)
+    
 # Conclusie
 if hoogste > 40:
     conclusie = "⚠️ De dag bevat zeer extreme hoge waarden (boven 40°C). Controle aanbevolen."
