@@ -465,22 +465,24 @@ df_maand = df_maand[df_maand["Raw Value"].notna()]
 
 if not df_maand.empty:
 
-    # 1️⃣ Tel negatieve waarden
+    totaal_waarden = len(df_maand)
     negatieve_count = (df_maand["Raw Value"] < 0).sum()
+    negatieve_percentage = (negatieve_count / totaal_waarden) * 100
 
-    # 2️⃣ Filter negatieve waarden eruit voor laagste geldige waarde
+    # Filter negatieve waarden eruit voor laagste geldige waarde
     df_maand_pos = df_maand[df_maand["Raw Value"] >= 0]
 
     if not df_maand_pos.empty:
         laagste_maand = round(df_maand_pos["Raw Value"].min(), 1)
     else:
-        laagste_maand = None  # geen geldige waarden
+        laagste_maand = None
 
     hoogste_maand = round(df_maand["Raw Value"].max(), 1)
 
     st.markdown(f"""
     ### Maandstatistieken ({gekozen_dag.strftime('%B %Y')})
     - **Aantal negatieve waarden:** {negatieve_count}  
+    - **Percentage negatieve waarden:** {negatieve_percentage:.1f}%  
     - **Laagste geldige waarde in de maand:** {laagste_maand if laagste_maand is not None else "Geen geldige waarden"}°C  
     - **Hoogste waarde in de maand:** {hoogste_maand}°C  
     """)
@@ -494,10 +496,20 @@ if not df_maand.empty:
 
     problemen = []
 
-    # ❌ Negatieve waarden
+    # ❌ A. Meer dan 50% negatieve waarden → data onbruikbaar
+    if negatieve_percentage >= 50:
+        maand_conclusie = (
+            "❌ Meer dan 50% van de maandwaarden is negatief. "
+            "De data is NIET geschikt voor analyse."
+        )
+        st.markdown(f"### Maandconclusie\n{maand_conclusie}")
+        return  # stop hier, want de rest is niet relevant
+
+    # ⚠️ B. Minder dan 50% negatieve waarden → filteren en verder
     if negatieve_count > 0:
         problemen.append(
-            f"Er zijn {negatieve_count} negatieve waarden gevonden, wat fysiek onmogelijk is."
+            f"Er zijn {negatieve_count} negatieve waarden gevonden. "
+            "Filter deze uit voordat je de data verder gebruikt."
         )
 
     # ❌ Onrealistisch hoge minimumtemperatuur
@@ -506,7 +518,7 @@ if not df_maand.empty:
             "De laagste geldige waarde ligt boven 30°C, wat onrealistisch is voor Suriname."
         )
 
-    # ❌ Onrealistisch lage minimumtemperatuur (na filtering)
+    # ❌ Onrealistisch lage minimumtemperatuur
     if laagste_maand is not None and laagste_maand < 5:
         problemen.append(
             "De laagste geldige waarde ligt onder 5°C, wat fysiek onmogelijk is."
