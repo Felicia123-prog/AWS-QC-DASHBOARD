@@ -435,10 +435,10 @@ st.markdown(f"""
 - **Aantal HIGH:** {qc_counts.get('HIGH', 0)}  
 - **Aantal VERY_HIGH:** {qc_counts.get('VERY_HIGH', 0)}  
 """)
-  
-# Dag Conclusie
+
+# ⭐ Dagconclusie
 if hoogste > 40:
-    conclusie = "⚠️ De dag bevat zeer extreme hoge waarden (boven 40°C). Controle aanbevolen."
+    conclusie = "❌ De dag bevat zeer extreme hoge waarden (boven 40°C). Controle aanbevolen."
 elif hoogste > 37:
     conclusie = "⚠️ De dag bevat extreme hoge waarden (boven 37°C)."
 elif laagste < 20:
@@ -446,7 +446,9 @@ elif laagste < 20:
 else:
     conclusie = "✔️ De gemeten waarden vallen binnen het normale bereik."
 
-st.markdown(f"### Conclusie\n{conclusie}")
+st.markdown(f"### Dagconclusie\n{conclusie}")
+
+
 # ---------------------------------------------------------
 # ⭐ 11. MAANDSTATISTIEKEN – AUTOMATISCH OP BASIS VAN GEKOZEN DAG
 # ---------------------------------------------------------
@@ -459,7 +461,6 @@ df_maand = df[
     (df["Timestamp"].dt.year == jaar)
 ].copy()
 
-# Alleen echte waarden
 df_maand = df_maand[df_maand["Raw Value"].notna()]
 
 if not df_maand.empty:
@@ -471,13 +472,23 @@ if not df_maand.empty:
     - **Laagste waarde in de maand:** {laagste_maand}°C  
     - **Hoogste waarde in de maand:** {hoogste_maand}°C  
     """)
-    # ---------------------------------------------------------
+
+
+# ---------------------------------------------------------
 # ⭐ 12. MAAND-CONCLUSIE – GESCHIKTHEID VAN HET STATION
 # ---------------------------------------------------------
 
 if not df_maand.empty:
 
-    if laagste_maand < 5:
+    # ❌ Nieuw: Onrealistisch hoge minimumtemperatuur
+    if laagste_maand > 30:
+        maand_conclusie = (
+            "❌ De laagste waarde van de maand ligt boven 30°C. "
+            "Dit is onrealistisch voor een minimumtemperatuur in Suriname. "
+            "Het station is NIET geschikt voor deze maand."
+        )
+
+    elif laagste_maand < 5:
         maand_conclusie = (
             "❌ De maand bevat waarden onder 5°C. "
             "Dit is fysiek onmogelijk voor Suriname. "
