@@ -302,7 +302,7 @@ st.markdown(f"""
 
 st.subheader("Dagoverzicht – Temperatuur")
 
-# 1. Timestamp bouwen
+# 1. Timestamp bouwen (nodig voor sorteren en grafiek)
 df["Tijd"] = df["Tijd"].astype(str).str.strip()
 df["Timestamp"] = pd.to_datetime(
     df["Dag"].astype(str) + " " + df["Tijd"].astype(str),
@@ -313,16 +313,16 @@ df["Timestamp"] = pd.to_datetime(
 df["Raw Value"] = pd.to_numeric(df["Raw Value"], errors="coerce")
 
 # 3. Gebruik de dag die bovenaan al gekozen is
-df_dag = df[df["Dag"] == geselecteerde_dag].copy()
+df_dag = df[df["Timestamp"].dt.date == gekozen_dag].copy()
 df_dag = df_dag.sort_values("Timestamp")
 
-# 4. QC op basis van simpele grenzen (GEEN missing!)
+# 4. Simpele QC (GEEN missing!)
 df_dag["QC_Flag"] = "OK"
 df_dag.loc[df_dag["Raw Value"] < 0, "QC_Flag"] = "LOW"
 df_dag.loc[df_dag["Raw Value"] > 40, "QC_Flag"] = "HIGH"
 
 # 5. Tabel tonen
-st.write(f"Temperatuurmetingen op {geselecteerde_dag}:")
+st.write(f"Temperatuurmetingen op {gekozen_dag}:")
 st.dataframe(df_dag[["Timestamp", "Raw Value", "QC_Flag"]])
 
 # 6. Grafiek tonen
@@ -332,7 +332,7 @@ fig = px.line(
     df_dag,
     x="Timestamp",
     y="Raw Value",
-    title=f"Temperatuurverloop op {geselecteerde_dag}",
+    title=f"Temperatuurverloop op {gekozen_dag}",
     markers=True,
     color="QC_Flag",
     color_discrete_map={
