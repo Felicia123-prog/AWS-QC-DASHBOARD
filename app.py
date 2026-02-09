@@ -149,130 +149,102 @@ Hoe groter de datagaten, hoe lager de betrouwbaarheid van de metingen voor die d
 </div>
 """
 st.markdown(qc_html, unsafe_allow_html=True)
+
 # ---------------------------------------------------------
 # 3. MAANDOVERZICHT QC – TEMPERATUUR
 # ---------------------------------------------------------
 
-import calendar  # <-- moet bovenaan staan
+st.subheader("Maandelijkse QC – Temperatuur")
 
-# Alleen uitvoeren als er data is
-if not df.empty:
+# Alle unieke dagen in de dataset
+alle_dagen = sorted(df['Timestamp'].dt.date.unique())
 
-    # Alle unieke dagen in de dataset
-    alle_dagen = sorted(df['Timestamp'].dt.date.unique())
+qc_resultaten = []
 
-    # Bepaal maand en jaar uit de data
-    eerste_dag = alle_dagen[0]
-    maand = eerste_dag.month          # <-- DEZE WAS DE MISSING LINE
-    maandnaam = eerste_dag.strftime("%B")
-    jaar = eerste_dag.year
+for dag in alle_dagen:
+    df_dag = df[df['Timestamp'].dt.date == dag]
 
-    # Nederlandse maandnaam
-    maanden_nl = {
-        "January": "Januari",
-        "February": "Februari",
-        "March": "Maart",
-        "April": "April",
-        "May": "Mei",
-        "June": "Juni",
-        "July": "Juli",
-        "August": "Augustus",
-        "September": "September",
-        "October": "Oktober",
-        "November": "November",
-        "December": "December"
-    }
+    # Verwachte 144 metingen
+    totaal = 144
+    aanwezig = len(df_dag)
+    percentage = round((aanwezig / totaal) * 100, 1)
 
-    maand_nl = maanden_nl[maandnaam]
+    status = "goed" if percentage >= 75 else "slecht"
 
-    st.subheader(f"MAAND QC van {maand_nl} {jaar}")
+    qc_resultaten.append({
+        "Dag": dag,
+        "Aanwezig": aanwezig,
+        "Percentage": percentage,
+        "Status": status
+    })
 
-    qc_resultaten = []
+qc_df = pd.DataFrame(qc_resultaten)
 
-    for dag in alle_dagen:
-        df_dag = df[df['Timestamp'].dt.date == dag]
+# -----------------------------
+# GRAFIEK MAANDOVERZICHT
+# -----------------------------
 
-        totaal = 144
-        aanwezig = len(df_dag)
-        percentage = round((aanwezig / totaal) * 100, 1)
+fig2 = go.Figure()
 
-        status = "goed" if percentage >= 75 else "slecht"
+cell_size = 40
+gap = 10
 
-        qc_resultaten.append({
-            "Dag": dag,
-            "Aanwezig": aanwezig,
-            "Percentage": percentage,
-            "Status": status
-        })
+for i, row in qc_df.iterrows():
+    kleur = "green" if row["Status"] == "goed" else "red"
 
-    qc_df = pd.DataFrame(qc_resultaten)
+    x0 = i * (cell_size + gap)
+    x1 = x0 + cell_size
 
-    # -----------------------------
-    # GRAFIEK MAANDOVERZICHT
-    # -----------------------------
-
-    fig2 = go.Figure()
-
-    cell_size = 40
-    gap = 10
-
-    for i, row in qc_df.iterrows():
-        kleur = "green" if row["Status"] == "goed" else "red"
-
-        x0 = i * (cell_size + gap)
-        x1 = x0 + cell_size
-
-        fig2.add_shape(
-            type="rect",
-            x0=x0, x1=x1,
-            y0=0, y1=cell_size,
-            line=dict(width=0),
-            fillcolor=kleur
-        )
-
-        fig2.add_annotation(
-            x=x0 + cell_size/2,
-            y=cell_size/2,
-            text=str(row["Dag"].day),
-            showarrow=False,
-            font=dict(color="white", size=14)
-        )
-
-    fig2.update_xaxes(visible=False, range=[0, len(qc_df) * (cell_size + gap)])
-    fig2.update_yaxes(visible=False, range=[0, cell_size])
-
-    fig2.update_layout(
-        height=150,
-        margin=dict(l=20, r=20, t=20, b=20),
-        plot_bgcolor="white"
+    fig2.add_shape(
+        type="rect",
+        x0=x0, x1=x1,
+        y0=0, y1=cell_size,
+        line=dict(width=0),
+        fillcolor=kleur
     )
 
-    st.plotly_chart(fig2, use_container_width=True)
+    # Dagnummer tonen
+    fig2.add_annotation(
+        x=x0 + cell_size/2,
+        y=cell_size/2,
+        text=str(row["Dag"].day),
+        showarrow=False,
+        font=dict(color="white", size=14)
+    )
 
-    # -----------------------------
-    # LEGENDA
-    # -----------------------------
-    st.markdown("**Legenda:** 🟩 Geschikte dag (≥75% compleet)   |   🟥 Ongeschikte dag (<75% compleet)")
+fig2.update_xaxes(
+    visible=False,
+    range=[0, len(qc_df) * (cell_size + gap)]
+)
 
-    # -----------------------------
-    # BEREKENING VAN DAGEN IN MAAND
-    # -----------------------------
+fig2.update_yaxes(
+    visible=False,
+    range=[0, cell_size]
+)
 
-    totaal_dagen_in_maand = calendar.monthrange(jaar, maand)[1]
-    dagen_met_data = len(alle_dagen)
-    ontbrekende_dagen = totaal_dagen_in_maand - dagen_met_data
+fig2.update_layout(
+    height=150,
+    margin=dict(l=20, r=20, t=20, b=20),
+    plot_bgcolor="white"
+)
 
-    # -----------------------------
-    # SAMENVATTING
-    # -----------------------------
+st.plotly_chart(fig2, use_container_width=True)
 
-    goede_dagen = (qc_df["Status"] == "goed").sum()
-    slechte_dagen = (qc_df["Status"] == "slecht").sum()
+# -----------------------------
+# LEGENDA VOOR MAAND-QC
+# -----------------------------
+st.markdown("**Legenda:** 🟩 Geschikte dag (≥75% compleet)   |   🟥 Ongeschikte dag (<75% compleet)")
 
-    st.markdown(f"""
-    ### Samenvatting maand
-    - **Geschikte dagen (≥75% compleet):** {goede_dagen}  
-    - **Ongeschikte dagen (<75% compleet):** {slechte_dagen}  
-    - **Aantal dagen met data:** {dagen_met_data} van de {totaal_dagen_in_maand}  
-    - **Ontbrekende dagen:** {ontbrekende_dagen}  
-    """)
+# -----------------------------
+# SAMENVATTING
+# -----------------------------
+
+goede_dagen = (qc_df["Status"] == "goed").sum()
+slechte_dagen = (qc_df["Status"] == "slecht").sum()
+
+st.markdown(f"""
+### Samenvatting maand
+- **Geschikte dagen (≥75% compleet):** {goede_dagen}  
+- **Ongeschikte dagen (<75% compleet):** {slechte_dagen}  
+- **Totaal aantal dagen:** {len(qc_df)}
+""")
