@@ -302,6 +302,9 @@ st.markdown(f"""
 
 st.subheader("Kwaliteitscontrole – Temperatuur")
 
+# Zorg dat er een echte timestamp bestaat
+df["Timestamp"] = pd.to_datetime(df["Dag"].astype(str) + " " + df["Tijd"].astype(str))
+
 df_qc = df.copy()
 df_qc = df_qc.sort_values("Timestamp").reset_index(drop=True)
 
