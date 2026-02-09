@@ -453,7 +453,18 @@ st.markdown(f"""
 - **Aantal HIGH:** {qc_counts.get('HIGH', 0)}  
 - **Aantal VERY_HIGH:** {qc_counts.get('VERY_HIGH', 0)}  
 """)
+  
+# Conclusie
+if hoogste > 40:
+    conclusie = "⚠️ De dag bevat zeer extreme hoge waarden (boven 40°C). Controle aanbevolen."
+elif hoogste > 37:
+    conclusie = "⚠️ De dag bevat extreme hoge waarden (boven 37°C)."
+elif laagste < 20:
+    conclusie = "ℹ️ De dag bevat lage waarden die niet typisch zijn voor Suriname."
+else:
+    conclusie = "✔️ De gemeten waarden vallen binnen het normale bereik."
 
+st.markdown(f"### Conclusie\n{conclusie}")
 # ---------------------------------------------------------
 # ⭐ 11. MAANDSTATISTIEKEN – AUTOMATISCH OP BASIS VAN GEKOZEN DAG
 # ---------------------------------------------------------
@@ -478,15 +489,3 @@ if not df_maand.empty:
     - **Laagste waarde in de maand:** {laagste_maand}°C  
     - **Hoogste waarde in de maand:** {hoogste_maand}°C  
     """)
-    
-# Conclusie
-if hoogste > 40:
-    conclusie = "⚠️ De dag bevat zeer extreme hoge waarden (boven 40°C). Controle aanbevolen."
-elif hoogste > 37:
-    conclusie = "⚠️ De dag bevat extreme hoge waarden (boven 37°C)."
-elif laagste < 20:
-    conclusie = "ℹ️ De dag bevat lage waarden die niet typisch zijn voor Suriname."
-else:
-    conclusie = "✔️ De gemeten waarden vallen binnen het normale bereik."
-
-st.markdown(f"### Conclusie\n{conclusie}")
