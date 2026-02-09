@@ -315,10 +315,11 @@ st.markdown(f"""
 """)
 
 # ---------------------------------------------------------
-# 4. DAGOVERZICHT – TEMPERATUUR
+# 4. GEREGISTREERDE TEMPERATUURMETINGEN & DATAKWALITEIT
 # ---------------------------------------------------------
 
-st.subheader("Dagoverzicht – Temperatuur")
+st.subheader("Geregistreerde Temperatuurmetingen & Datakwaliteit")
+st.caption("We kijken naar de werkelijke gemeten data én de kwaliteit ervan.")
 
 # 1. Timestamp bouwen
 df["Tijd"] = df["Tijd"].astype(str).str.strip()
@@ -343,6 +344,9 @@ if df_dag.empty:
 
 # 6. Sorteren
 df_dag = df_dag.sort_values("Timestamp")
+
+# 6b. Raw Value afronden voor weergave
+df_dag["Raw Value"] = df_dag["Raw Value"].round(1)
 
 # ---------------------------------------------------------
 # ⭐ 7. QC INTERVALLEN – SURINAME SPECIFIEK
@@ -373,12 +377,12 @@ df_dag.loc[df_dag["Raw Value"] > 40, "QC_Flag"] = "VERY_HIGH"
 
 def highlight_qc(val):
     colors = {
-        "OK": "background-color: #b6f2b6",               # lichtgroen
-        "LOW_RANGE": "background-color: #ffd27f",        # oranje
-        "LOW_SUSPICIOUS": "background-color: #fff59d",   # geel
-        "LOW_IMPOSSIBLE": "background-color: #90caf9",   # blauw
-        "HIGH": "background-color: #ff8a80",             # rood
-        "VERY_HIGH": "background-color: #d32f2f; color: white"  # donkerrood
+        "OK": "background-color: #b6f2b6",
+        "LOW_RANGE": "background-color: #ffd27f",
+        "LOW_SUSPICIOUS": "background-color: #fff59d",
+        "LOW_IMPOSSIBLE": "background-color: #90caf9",
+        "HIGH": "background-color: #ff8a80",
+        "VERY_HIGH": "background-color: #d32f2f; color: white"
     }
     return colors.get(val, "")
 
@@ -389,7 +393,37 @@ st.dataframe(
 )
 
 # ---------------------------------------------------------
-# 9. Grafiek tonen – MET QC-KLEUREN
+# ⭐ 9. QC SAMENVATTING VAN EXTREME WAARDEN
+# ---------------------------------------------------------
+
+laagste = df_dag["Raw Value"].min()
+hoogste = df_dag["Raw Value"].max()
+qc_counts = df_dag["QC_Flag"].value_counts()
+
+st.markdown(f"""
+### Samenvatting datakwaliteit
+- **Laagste waarde:** {laagste}°C  
+- **Hoogste waarde:** {hoogste}°C  
+- **Aantal LOW_RANGE:** {qc_counts.get('LOW_RANGE', 0)}  
+- **Aantal LOW_SUSPICIOUS:** {qc_counts.get('LOW_SUSPICIOUS', 0)}  
+- **Aantal HIGH:** {qc_counts.get('HIGH', 0)}  
+- **Aantal VERY_HIGH:** {qc_counts.get('VERY_HIGH', 0)}  
+""")
+
+# Conclusie
+if hoogste > 40:
+    conclusie = "⚠️ De dag bevat zeer extreme hoge waarden (boven 40°C). Controle aanbevolen."
+elif hoogste > 37:
+    conclusie = "⚠️ De dag bevat extreme hoge waarden (boven 37°C)."
+elif laagste < 20:
+    conclusie = "ℹ️ De dag bevat lage waarden die niet typisch zijn voor Suriname."
+else:
+    conclusie = "✔️ De gemeten waarden vallen binnen het normale bereik."
+
+st.markdown(f"### Conclusie\n{conclusie}")
+
+# ---------------------------------------------------------
+# 10. Grafiek tonen – MET QC-KLEUREN
 # ---------------------------------------------------------
 
 import plotly.express as px
@@ -411,7 +445,6 @@ fig = px.line(
     }
 )
 
-# As-labels
 fig.update_yaxes(title_text="Temperatuur (°C)")
 fig.update_xaxes(title_text="Tijd")
 
