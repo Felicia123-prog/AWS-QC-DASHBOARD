@@ -302,8 +302,11 @@ st.markdown(f"""
 
 st.subheader("Kwaliteitscontrole – Temperatuur")
 
-# Zorg dat er een echte timestamp bestaat
+# 1. Timestamp maken
 df["Timestamp"] = pd.to_datetime(df["Dag"].astype(str) + " " + df["Tijd"].astype(str))
+
+# 2. Raw Value numeriek maken
+df["Raw Value"] = pd.to_numeric(df["Raw Value"], errors="coerce")
 
 df_qc = df.copy()
 df_qc = df_qc.sort_values("Timestamp").reset_index(drop=True)
@@ -312,21 +315,30 @@ df_qc = df_qc.sort_values("Timestamp").reset_index(drop=True)
 df_qc["QC_Flag"] = "OK"
 
 # -----------------------------
+# MISSING VALUES
+# -----------------------------
+df_qc.loc[df_qc["Raw Value"].isna(), "QC_Flag"] = "MISSING"
+
+# -----------------------------
 # 1. Fysieke grenzen
 # -----------------------------
 min_temp = -20
 max_temp = 50
 
-df_qc.loc[(df_qc["Raw Value"] < min_temp) | (df_qc["Raw Value"] > max_temp), "QC_Flag"] = "OUT_OF_RANGE"
+df_qc.loc[
+    (df_qc["Raw Value"] < min_temp) | 
+    (df_qc["Raw Value"] > max_temp),
+    "QC_Flag"
+] = "OUT_OF_RANGE"
 
 # -----------------------------
-# 2. Spikes (grote sprongen)
+# 2. Spikes
 # -----------------------------
 df_qc["Temp_Diff"] = df_qc["Raw Value"].diff().abs()
 df_qc.loc[df_qc["Temp_Diff"] > 5, "QC_Flag"] = "SPIKE"
 
 # -----------------------------
-# 3. Plateaus (sensor hangt vast)
+# 3. Plateaus
 # -----------------------------
 df_qc["Same_As_Previous"] = df_qc["Raw Value"].diff().abs() == 0
 df_qc["Plateau_Run"] = df_qc["Same_As_Previous"].rolling(5).sum()
