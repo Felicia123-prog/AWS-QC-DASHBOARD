@@ -318,19 +318,24 @@ df_dag = df[df["Timestamp"].dt.date == gekozen_dag].copy()
 # 4. VERWIJDER ALLE rijen zonder Raw Value
 df_dag = df_dag[df_dag["Raw Value"].notna()]
 
-# 5. Sorteren
+# 5. ALS ER GEEN ENKELE METING IS → MELDING TONEN
+if df_dag.empty:
+    st.warning(f"Er zijn geen temperatuurmetingen beschikbaar voor {gekozen_dag}.")
+    st.stop()
+
+# 6. Sorteren
 df_dag = df_dag.sort_values("Timestamp")
 
-# 6. Simpele QC (GEEN missing!)
+# 7. Simpele QC (GEEN missing!)
 df_dag["QC_Flag"] = "OK"
 df_dag.loc[df_dag["Raw Value"] < 0, "QC_Flag"] = "LOW"
 df_dag.loc[df_dag["Raw Value"] > 40, "QC_Flag"] = "HIGH"
 
-# 7. Tabel tonen
+# 8. Tabel tonen
 st.write(f"Temperatuurmetingen op {gekozen_dag}:")
 st.dataframe(df_dag[["Timestamp", "Raw Value", "QC_Flag"]])
 
-# 8. Grafiek tonen
+# 9. Grafiek tonen
 import plotly.express as px
 
 fig = px.line(
