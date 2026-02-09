@@ -304,23 +304,22 @@ st.subheader("Dagoverzicht – Temperatuur")
 
 # 1. Timestamp bouwen
 df["Tijd"] = df["Tijd"].astype(str).str.strip()
-df["Timestamp"] = pd.to_datetime(df["Dag"].astype(str) + " " + df["Tijd"].astype(str), errors="coerce")
+df["Timestamp"] = pd.to_datetime(
+    df["Dag"].astype(str) + " " + df["Tijd"].astype(str),
+    errors="coerce"
+)
 
 # 2. Raw Value numeriek maken
 df["Raw Value"] = pd.to_numeric(df["Raw Value"], errors="coerce")
 
-# 3. Dagselectie
-alle_dagen = sorted(df["Dag"].unique())
-geselecteerde_dag = st.selectbox("Kies een dag:", alle_dagen)
-
+# 3. Gebruik de dag die bovenaan al gekozen is
 df_dag = df[df["Dag"] == geselecteerde_dag].copy()
 df_dag = df_dag.sort_values("Timestamp")
 
-# 4. QC op basis van simpele grenzen
+# 4. QC op basis van simpele grenzen (GEEN missing!)
 df_dag["QC_Flag"] = "OK"
 df_dag.loc[df_dag["Raw Value"] < 0, "QC_Flag"] = "LOW"
 df_dag.loc[df_dag["Raw Value"] > 40, "QC_Flag"] = "HIGH"
-df_dag.loc[df_dag["Raw Value"].isna(), "QC_Flag"] = "MISSING"
 
 # 5. Tabel tonen
 st.write(f"Temperatuurmetingen op {geselecteerde_dag}:")
@@ -339,8 +338,7 @@ fig = px.line(
     color_discrete_map={
         "OK": "green",
         "LOW": "blue",
-        "HIGH": "red",
-        "MISSING": "gray"
+        "HIGH": "red"
     }
 )
 
