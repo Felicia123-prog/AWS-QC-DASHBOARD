@@ -302,7 +302,7 @@ st.markdown(f"""
 
 st.subheader("Dagoverzicht – Temperatuur")
 
-# 1. Timestamp bouwen (nodig voor sorteren en grafiek)
+# 1. Timestamp bouwen
 df["Tijd"] = df["Tijd"].astype(str).str.strip()
 df["Timestamp"] = pd.to_datetime(
     df["Dag"].astype(str) + " " + df["Tijd"].astype(str),
@@ -314,18 +314,23 @@ df["Raw Value"] = pd.to_numeric(df["Raw Value"], errors="coerce")
 
 # 3. Gebruik de dag die bovenaan al gekozen is
 df_dag = df[df["Timestamp"].dt.date == gekozen_dag].copy()
+
+# 4. VERWIJDER ALLE rijen zonder Raw Value
+df_dag = df_dag[df_dag["Raw Value"].notna()]
+
+# 5. Sorteren
 df_dag = df_dag.sort_values("Timestamp")
 
-# 4. Simpele QC (GEEN missing!)
+# 6. Simpele QC (GEEN missing!)
 df_dag["QC_Flag"] = "OK"
 df_dag.loc[df_dag["Raw Value"] < 0, "QC_Flag"] = "LOW"
 df_dag.loc[df_dag["Raw Value"] > 40, "QC_Flag"] = "HIGH"
 
-# 5. Tabel tonen
+# 7. Tabel tonen
 st.write(f"Temperatuurmetingen op {gekozen_dag}:")
 st.dataframe(df_dag[["Timestamp", "Raw Value", "QC_Flag"]])
 
-# 6. Grafiek tonen
+# 8. Grafiek tonen
 import plotly.express as px
 
 fig = px.line(
