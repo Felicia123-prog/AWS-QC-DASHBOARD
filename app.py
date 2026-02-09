@@ -235,6 +235,35 @@ st.plotly_chart(fig2, use_container_width=True)
 st.markdown("**Legenda:** 🟩 Geschikte dag (≥75% compleet)   |   🟥 Ongeschikte dag (<75% compleet)")
 
 # -----------------------------
+# BEREKENING VAN DAGEN IN MAAND (ZONDER CALENDAR)
+# -----------------------------
+
+# Bepaal maandnummer en jaar
+eerste_dag = alle_dagen[0]
+maand = eerste_dag.month
+jaar = eerste_dag.year
+
+# Aantal dagen per maand (inclusief schrikkeljaar)
+dagen_per_maand = {
+    1: 31,
+    2: 29 if (jaar % 4 == 0 and (jaar % 100 != 0 or jaar % 400 == 0)) else 28,
+    3: 31,
+    4: 30,
+    5: 31,
+    6: 30,
+    7: 31,
+    8: 31,
+    9: 30,
+    10: 31,
+    11: 30,
+    12: 31
+}
+
+totaal_dagen_in_maand = dagen_per_maand[maand]
+dagen_met_data = len(alle_dagen)
+ontbrekende_dagen = totaal_dagen_in_maand - dagen_met_data
+
+# -----------------------------
 # SAMENVATTING
 # -----------------------------
 
@@ -245,5 +274,6 @@ st.markdown(f"""
 ### Samenvatting maand
 - **Geschikte dagen (≥75% compleet):** {goede_dagen}  
 - **Ongeschikte dagen (<75% compleet):** {slechte_dagen}  
-- **Totaal aantal dagen:** {len(qc_df)}
+- **Aantal dagen met data:** {dagen_met_data} van de {totaal_dagen_in_maand}  
+- **Ontbrekende dagen:** {ontbrekende_dagen}  
 """)
