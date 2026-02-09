@@ -297,82 +297,51 @@ st.markdown(f"""
 """)
 
 # ---------------------------------------------------------
-# 4. KWALITEITSCONTROLE – TEMPERATUUR
+# 4. DAGOVERZICHT – TEMPERATUUR
 # ---------------------------------------------------------
 
-st.subheader("Kwaliteitscontrole – Temperatuur")
+st.subheader("Dagoverzicht – Temperatuur")
 
-# -----------------------------
-# BASIS: Timestamp + Numeriek maken
-# -----------------------------
-
-# Tijd netjes maken
+# 1. Timestamp bouwen
 df["Tijd"] = df["Tijd"].astype(str).str.strip()
+df["Timestamp"] = pd.to_datetime(df["Dag"].astype(str) + " " + df["Tijd"].astype(str), errors="coerce")
 
-# Combineer Dag + Tijd tot echte timestamp
-df["Timestamp"] = pd.to_datetime(
-    df["Dag"].astype(str) + " " + df["Tijd"].astype(str),
-    errors="coerce"
-)
-
-# Raw Value numeriek maken
+# 2. Raw Value numeriek maken
 df["Raw Value"] = pd.to_numeric(df["Raw Value"], errors="coerce")
 
-# Sorteer op tijd
-df = df.sort_values("Timestamp").reset_index(drop=True)
+# 3. Dagselectie
+alle_dagen = sorted(df["Dag"].unique())
+geselecteerde_dag = st.selectbox("Kies een dag:", alle_dagen)
 
-# Verwijder rijen zonder timestamp
-df = df[df["Timestamp"].notna()]
+df_dag = df[df["Dag"] == geselecteerde_dag].copy()
+df_dag = df_dag.sort_values("Timestamp")
 
-# Kopie voor QC
-df_qc = df.copy()
+# 4. QC op basis van simpele grenzen
+df_dag["QC_Flag"] = "OK"
+df_dag.loc[df_dag["Raw Value"] < 0, "QC_Flag"] = "LOW"
+df_dag.loc[df_dag["Raw Value"] > 40, "QC_Flag"] = "HIGH"
+df_dag.loc[df_dag["Raw Value"].isna(), "QC_Flag"] = "MISSING"
 
-# QC kolom
-df_qc["QC_Flag"] = "OK"
+# 5. Tabel tonen
+st.write(f"Temperatuurmetingen op {geselecteerde_dag}:")
+st.dataframe(df_dag[["Timestamp", "Raw Value", "QC_Flag"]])
 
-# -----------------------------
-# 0. MISSING VALUES
-# -----------------------------
-df_qc.loc[df_qc["Raw Value"].isna(), "QC_Flag"] = "MISSING"
+# 6. Grafiek tonen
+import plotly.express as px
 
-# -----------------------------
-# 1. Fysieke grenzen
-# -----------------------------
-min_temp = -20
-max_temp = 50
+fig = px.line(
+    df_dag,
+    x="Timestamp",
+    y="Raw Value",
+    title=f"Temperatuurverloop op {geselecteerde_dag}",
+    markers=True,
+    color="QC_Flag",
+    color_discrete_map={
+        "OK": "green",
+        "LOW": "blue",
+        "HIGH": "red",
+        "MISSING": "gray"
+    }
+)
 
-df_qc.loc[
-    (df_qc["Raw Value"] < min_temp) |
-    (df_qc["Raw Value"] > max_temp),
-    "QC_Flag"
-] = "OUT_OF_RANGE"
-
-# -----------------------------
-# 2. Spikes (grote sprongen)
-# -----------------------------
-df_qc["Temp_Diff"] = df_qc["Raw Value"].diff().abs()
-df_qc.loc[df_qc["Temp_Diff"] > 5, "QC_Flag"] = "SPIKE"
-
-# -----------------------------
-# 3. Plateaus (sensor hangt vast)
-# -----------------------------
-df_qc["Same_As_Previous"] = df_qc["Raw Value"].diff().abs() == 0
-df_qc["Plateau_Run"] = df_qc["Same_As_Previous"].rolling(5).sum()
-df_qc.loc[df_qc["Plateau_Run"] >= 5, "QC_Flag"] = "PLATEAU"
-
-# -----------------------------
-# 4. Duplicaten
-# -----------------------------
-df_qc.loc[df_qc["Timestamp"].duplicated(), "QC_Flag"] = "DUPLICATE"
-
-# -----------------------------
-# 5. Gaten in tijdreeks
-# -----------------------------
-df_qc["Time_Diff"] = df_qc["Timestamp"].diff().dt.total_seconds() / 60
-df_qc.loc[df_qc["Time_Diff"] > 10, "QC_Flag"] = "GAP"
-
-# -----------------------------
-# RESULTAAT TONEN
-# -----------------------------
-st.write("QC-resultaten (eerste 200 rijen):")
-st.dataframe(df_qc.head(200))
+st.plotly_chart(fig, use_container_width=True)
