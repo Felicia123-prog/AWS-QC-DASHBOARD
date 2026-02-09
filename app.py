@@ -295,3 +295,46 @@ st.markdown(f"""
 - **Percentage geschikte dagen:** {percentage_geschikt}%  
 - **Beoordeling:** {maand_status}
 """)
+# ---------------------------------------------------------
+# 4. KWALITEITSCONTROLE – TEMPERATUUR
+# ---------------------------------------------------------
+
+st.subheader("Kwaliteitscontrole – Temperatuur")
+
+df_qc = df.copy()
+df_qc = df_qc.sort_values("Timestamp").reset_index(drop=True)
+
+# QC kolom
+df_qc["QC_Flag"] = "OK"
+
+# -----------------------------
+# 1. Fysieke grenzen
+# -----------------------------
+min_temp = -20
+max_temp = 50
+
+df_qc.loc[(df_qc["Temperature"] < min_temp) | (df_qc["Temperature"] > max_temp), "QC_Flag"] = "OUT_OF_RANGE"
+
+# -----------------------------
+# 2. Spikes (grote sprongen)
+# -----------------------------
+df_qc["Temp_Diff"] = df_qc["Temperature"].diff().abs()
+df_qc.loc[df_qc["Temp_Diff"] > 5, "QC_Flag"] = "SPIKE"
+
+# -----------------------------
+# 3. Plateaus (sensor hangt vast)
+# -----------------------------
+df_qc["Same_As_Previous"] = df_qc["Temperature"].diff().abs() == 0
+df_qc["Plateau_Run"] = df_qc["Same_As_Previous"].rolling(5).sum()  # 5 opeenvolgende identieke waarden
+df_qc.loc[df_qc["Plateau_Run"] >= 5, "QC_Flag"] = "PLATEAU"
+
+# -----------------------------
+# 4. Duplicaten
+# -----------------------------
+df_qc.loc[df_qc["Timestamp"].duplicated(), "QC_Flag"] = "DUPLICATE"
+
+# -----------------------------
+# 5. Gaten in tijdreeks
+# -----------------------------
+df_qc["Time_Diff"] = df_qc["Timestamp"].diff().dt.total_seconds() / 60
+df_qc.loc[df_qc["Time_Diff"] > 10, "QC_Flag"] = "GAP"
