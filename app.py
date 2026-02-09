@@ -480,52 +480,47 @@ if not df_maand.empty:
 
 if not df_maand.empty:
 
-    # ❌ Nieuw: Onrealistisch hoge minimumtemperatuur
+    problemen = []  # we verzamelen alle fouten
+
+    # ❌ Onrealistisch hoge minimumtemperatuur
     if laagste_maand > 30:
-        maand_conclusie = (
-            "❌ De laagste waarde van de maand ligt boven 30°C. "
-            "Dit is onrealistisch voor een minimumtemperatuur in Suriname. "
-            "Het station is NIET geschikt voor deze maand."
+        problemen.append(
+            "De laagste waarde van de maand ligt boven 30°C, wat onrealistisch is voor een minimumtemperatuur in Suriname."
         )
 
-    elif laagste_maand < 5:
-        maand_conclusie = (
-            "❌ De maand bevat waarden onder 5°C. "
-            "Dit is fysiek onmogelijk voor Suriname. "
-            "Het station is NIET geschikt voor deze maand."
+    # ❌ Onrealistisch lage minimumtemperatuur
+    if laagste_maand < 5:
+        problemen.append(
+            "De maand bevat waarden onder 5°C, wat fysiek onmogelijk is voor Suriname."
         )
-
     elif laagste_maand < 10:
-        maand_conclusie = (
-            "❌ De maand bevat zeer onrealistische lage waarden (<10°C). "
-            "Het station is NIET geschikt voor deze maand."
+        problemen.append(
+            "De maand bevat zeer onrealistische lage waarden (<10°C)."
         )
-
     elif laagste_maand < 20:
-        maand_conclusie = (
-            "⚠️ De maand bevat lage waarden (<20°C) die niet typisch zijn voor Suriname. "
-            "Controle van het station wordt aanbevolen."
+        problemen.append(
+            "De maand bevat lage waarden (<20°C) die niet typisch zijn voor Suriname."
         )
 
-    elif hoogste_maand > 45:
-        maand_conclusie = (
-            "❌ De maand bevat waarden boven 45°C. "
-            "Dit is fysiek onmogelijk. "
-            "Het station is NIET geschikt voor deze maand."
+    # ❌ Onrealistisch hoge maximumtemperatuur
+    if hoogste_maand > 45:
+        problemen.append(
+            "De maand bevat waarden boven 45°C, wat fysiek onmogelijk is."
         )
-
     elif hoogste_maand > 40:
-        maand_conclusie = (
-            "❌ De maand bevat extreem hoge waarden (>40°C). "
-            "Het station is NIET geschikt voor deze maand."
+        problemen.append(
+            "De maand bevat extreem hoge waarden (>40°C)."
         )
-
     elif hoogste_maand > 37:
-        maand_conclusie = (
-            "⚠️ De maand bevat zeer hoge waarden (>37°C). "
-            "Controle van het station wordt aanbevolen."
+        problemen.append(
+            "De maand bevat zeer hoge waarden (>37°C)."
         )
 
+    # ⭐ Bouw de conclusie op basis van alle gevonden problemen
+    if problemen:
+        maand_conclusie = "❌ Het station is NIET geschikt voor deze maand.\n\n" + "\n".join(
+            f"- {p}" for p in problemen
+        )
     else:
         maand_conclusie = (
             "✔ Het station toont realistische waarden voor deze maand. "
