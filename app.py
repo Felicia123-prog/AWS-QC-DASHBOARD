@@ -149,12 +149,11 @@ Hoe groter de datagaten, hoe lager de betrouwbaarheid van de metingen voor die d
 </div>
 """
 st.markdown(qc_html, unsafe_allow_html=True)
-
 # ---------------------------------------------------------
 # 3. MAANDOVERZICHT QC – TEMPERATUUR
 # ---------------------------------------------------------
 
-import calendar
+import calendar  # <-- moet bovenaan staan
 
 # Alleen uitvoeren als er data is
 if not df.empty:
@@ -164,6 +163,7 @@ if not df.empty:
 
     # Bepaal maand en jaar uit de data
     eerste_dag = alle_dagen[0]
+    maand = eerste_dag.month          # <-- DEZE WAS DE MISSING LINE
     maandnaam = eerste_dag.strftime("%B")
     jaar = eerste_dag.year
 
