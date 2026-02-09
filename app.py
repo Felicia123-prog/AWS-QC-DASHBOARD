@@ -389,7 +389,9 @@ def highlight_qc(val):
 st.write(f"Temperatuurmetingen op {gekozen_dag}:")
 st.dataframe(
     df_dag[["Timestamp", "Raw Value", "QC_Flag"]]
-    .style.applymap(highlight_qc, subset=["QC_Flag"])
+    .style
+    .applymap(highlight_qc, subset=["QC_Flag"])
+    .format({"Raw Value": "{:.1f}"})
 )
 
 # ---------------------------------------------------------
