@@ -277,3 +277,21 @@ st.markdown(f"""
 - **Aantal dagen met data:** {dagen_met_data} van de {totaal_dagen_in_maand}  
 - **Ontbrekende dagen:** {ontbrekende_dagen}  
 """)
+
+# -----------------------------
+# CONCLUSIE OVER MAANDGEBRUIK
+# -----------------------------
+
+totaal_dagen = goede_dagen + slechte_dagen
+percentage_geschikt = round((goede_dagen / totaal_dagen) * 100, 1) if totaal_dagen > 0 else 0
+
+if percentage_geschikt >= 75:
+    maand_status = "✔️ De maand is **geschikt** om verder te gebruiken."
+else:
+    maand_status = "❌ De maand is **niet geschikt** om verder te gebruiken."
+
+st.markdown(f"""
+### Conclusie maandgebruik
+- **Percentage geschikte dagen:** {percentage_geschikt}%  
+- **Beoordeling:** {maand_status}
+""")
