@@ -436,7 +436,7 @@ st.markdown(f"""
 - **Aantal VERY_HIGH:** {qc_counts.get('VERY_HIGH', 0)}  
 """)
   
-# Conclusie
+# Dag Conclusie
 if hoogste > 40:
     conclusie = "⚠️ De dag bevat zeer extreme hoge waarden (boven 40°C). Controle aanbevolen."
 elif hoogste > 37:
