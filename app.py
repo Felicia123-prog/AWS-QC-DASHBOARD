@@ -345,7 +345,7 @@ if df_dag.empty:
 df_dag = df_dag.sort_values("Timestamp")
 
 # ---------------------------------------------------------
-# ⭐ 7. QC INTERVALLEN – TROPISCH KLIMAAT (Stap 2)
+# ⭐ 7. QC INTERVALLEN – SURINAME SPECIFIEK
 # ---------------------------------------------------------
 
 df_dag["QC_Flag"] = "OK"
@@ -356,18 +356,37 @@ df_dag.loc[df_dag["Raw Value"] < 0, "QC_Flag"] = "LOW_IMPOSSIBLE"
 # Onrealistisch laag (0–5°C)
 df_dag.loc[(df_dag["Raw Value"] >= 0) & (df_dag["Raw Value"] < 5), "QC_Flag"] = "LOW_SUSPICIOUS"
 
-# Verdacht laag (5–10°C)
-df_dag.loc[(df_dag["Raw Value"] >= 5) & (df_dag["Raw Value"] < 10), "QC_Flag"] = "LOW_RANGE"
+# Verdacht laag (5–20°C)
+df_dag.loc[(df_dag["Raw Value"] >= 5) & (df_dag["Raw Value"] < 20), "QC_Flag"] = "LOW_RANGE"
 
-# Onrealistisch hoog (>40°C)
-df_dag.loc[df_dag["Raw Value"] > 40, "QC_Flag"] = "HIGH"
+# Normaal (20–37°C) → OK
+
+# Extreem hoog (37–40°C)
+df_dag.loc[(df_dag["Raw Value"] >= 37) & (df_dag["Raw Value"] <= 40), "QC_Flag"] = "HIGH"
+
+# Zeer extreem hoog (>40°C)
+df_dag.loc[df_dag["Raw Value"] > 40, "QC_Flag"] = "VERY_HIGH"
 
 # ---------------------------------------------------------
-# 8. Tabel tonen
+# 8. Tabel tonen – MET HIGHLIGHTING
 # ---------------------------------------------------------
+
+def highlight_qc(val):
+    colors = {
+        "OK": "background-color: #b6f2b6",               # lichtgroen
+        "LOW_RANGE": "background-color: #ffd27f",        # oranje
+        "LOW_SUSPICIOUS": "background-color: #fff59d",   # geel
+        "LOW_IMPOSSIBLE": "background-color: #90caf9",   # blauw
+        "HIGH": "background-color: #ff8a80",             # rood
+        "VERY_HIGH": "background-color: #d32f2f; color: white"  # donkerrood
+    }
+    return colors.get(val, "")
 
 st.write(f"Temperatuurmetingen op {gekozen_dag}:")
-st.dataframe(df_dag[["Timestamp", "Raw Value", "QC_Flag"]])
+st.dataframe(
+    df_dag[["Timestamp", "Raw Value", "QC_Flag"]]
+    .style.applymap(highlight_qc, subset=["QC_Flag"])
+)
 
 # ---------------------------------------------------------
 # 9. Grafiek tonen – MET QC-KLEUREN
@@ -387,7 +406,8 @@ fig = px.line(
         "LOW_RANGE": "orange",
         "LOW_SUSPICIOUS": "yellow",
         "LOW_IMPOSSIBLE": "blue",
-        "HIGH": "red"
+        "HIGH": "red",
+        "VERY_HIGH": "darkred"
     }
 )
 
