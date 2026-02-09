@@ -302,20 +302,36 @@ st.markdown(f"""
 
 st.subheader("Kwaliteitscontrole – Temperatuur")
 
-# 1. Timestamp maken
-df["Timestamp"] = pd.to_datetime(df["Dag"].astype(str) + " " + df["Tijd"].astype(str))
+# -----------------------------
+# BASIS: Timestamp + Numeriek maken
+# -----------------------------
 
-# 2. Raw Value numeriek maken
+# Tijd netjes maken
+df["Tijd"] = df["Tijd"].astype(str).str.strip()
+
+# Combineer Dag + Tijd tot echte timestamp
+df["Timestamp"] = pd.to_datetime(
+    df["Dag"].astype(str) + " " + df["Tijd"].astype(str),
+    errors="coerce"
+)
+
+# Raw Value numeriek maken
 df["Raw Value"] = pd.to_numeric(df["Raw Value"], errors="coerce")
 
+# Sorteer op tijd
+df = df.sort_values("Timestamp").reset_index(drop=True)
+
+# Verwijder rijen zonder timestamp
+df = df[df["Timestamp"].notna()]
+
+# Kopie voor QC
 df_qc = df.copy()
-df_qc = df_qc.sort_values("Timestamp").reset_index(drop=True)
 
 # QC kolom
 df_qc["QC_Flag"] = "OK"
 
 # -----------------------------
-# MISSING VALUES
+# 0. MISSING VALUES
 # -----------------------------
 df_qc.loc[df_qc["Raw Value"].isna(), "QC_Flag"] = "MISSING"
 
@@ -326,19 +342,19 @@ min_temp = -20
 max_temp = 50
 
 df_qc.loc[
-    (df_qc["Raw Value"] < min_temp) | 
+    (df_qc["Raw Value"] < min_temp) |
     (df_qc["Raw Value"] > max_temp),
     "QC_Flag"
 ] = "OUT_OF_RANGE"
 
 # -----------------------------
-# 2. Spikes
+# 2. Spikes (grote sprongen)
 # -----------------------------
 df_qc["Temp_Diff"] = df_qc["Raw Value"].diff().abs()
 df_qc.loc[df_qc["Temp_Diff"] > 5, "QC_Flag"] = "SPIKE"
 
 # -----------------------------
-# 3. Plateaus
+# 3. Plateaus (sensor hangt vast)
 # -----------------------------
 df_qc["Same_As_Previous"] = df_qc["Raw Value"].diff().abs() == 0
 df_qc["Plateau_Run"] = df_qc["Same_As_Previous"].rolling(5).sum()
@@ -354,3 +370,9 @@ df_qc.loc[df_qc["Timestamp"].duplicated(), "QC_Flag"] = "DUPLICATE"
 # -----------------------------
 df_qc["Time_Diff"] = df_qc["Timestamp"].diff().dt.total_seconds() / 60
 df_qc.loc[df_qc["Time_Diff"] > 10, "QC_Flag"] = "GAP"
+
+# -----------------------------
+# RESULTAAT TONEN
+# -----------------------------
+st.write("QC-resultaten (eerste 200 rijen):")
+st.dataframe(df_qc.head(200))
