@@ -163,6 +163,7 @@ qc_html = f"""
 """
 
 st.markdown(qc_html, unsafe_allow_html=True)
+
 # ---------------------------------------------------------
 # 3. MAANDOVERZICHT QC – TEMPERATUUR
 # ---------------------------------------------------------
@@ -175,11 +176,16 @@ alle_dagen = sorted(df['Timestamp'].dt.date.unique())
 qc_resultaten = []
 
 for dag in alle_dagen:
-    df_dag = df[df['Timestamp'].dt.date == dag]
+    df_dag = df[df['Timestamp'].dt.date == dag].copy()
+
+    # Raw Value numeriek maken
+    df_dag["Raw Value"] = pd.to_numeric(df_dag["Raw Value"], errors="coerce")
+
+    # ⭐ Alleen echte metingen tellen
+    aanwezig = df_dag["Raw Value"].notna().sum()
 
     # Verwachte 144 metingen
     totaal = 144
-    aanwezig = len(df_dag)
     percentage = round((aanwezig / totaal) * 100, 1)
 
     status = "goed" if percentage >= 75 else "slecht"
@@ -249,15 +255,13 @@ st.plotly_chart(fig2, use_container_width=True)
 st.markdown("**Legenda:** 🟩 Geschikte dag (≥75% compleet)   |   🟥 Ongeschikte dag (<75% compleet)")
 
 # -----------------------------
-# BEREKENING VAN DAGEN IN MAAND (ZONDER CALENDAR)
+# BEREKENING VAN DAGEN IN MAAND
 # -----------------------------
 
-# Bepaal maandnummer en jaar
 eerste_dag = alle_dagen[0]
 maand = eerste_dag.month
 jaar = eerste_dag.year
 
-# Aantal dagen per maand (inclusief schrikkeljaar)
 dagen_per_maand = {
     1: 31,
     2: 29 if (jaar % 4 == 0 and (jaar % 100 != 0 or jaar % 400 == 0)) else 28,
