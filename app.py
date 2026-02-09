@@ -393,7 +393,49 @@ st.dataframe(
 )
 
 # ---------------------------------------------------------
-# ⭐ 9. QC SAMENVATTING VAN EXTREME WAARDEN
+# ⭐ LEGENDA – ONDER DE TABEL
+# ---------------------------------------------------------
+
+st.markdown("""
+### Legenda datakwaliteit
+- 🟩 **OK** — Normale waarden (20–37°C)  
+- 🟧 **LOW_RANGE** — Verdacht laag (5–20°C)  
+- 🟨 **LOW_SUSPICIOUS** — Onrealistisch laag (0–5°C)  
+- 🟦 **LOW_IMPOSSIBLE** — Onmogelijk (<0°C)  
+- 🟥 **HIGH** — Extreem hoog (37–40°C)  
+- 🟥 **VERY_HIGH** — Zeer extreem hoog (>40°C)  
+""")
+
+# ---------------------------------------------------------
+# 9. Grafiek tonen – MET QC-KLEUREN
+# ---------------------------------------------------------
+
+import plotly.express as px
+
+fig = px.line(
+    df_dag,
+    x="Timestamp",
+    y="Raw Value",
+    title=f"Temperatuurverloop op {gekozen_dag}",
+    markers=True,
+    color="QC_Flag",
+    color_discrete_map={
+        "OK": "green",
+        "LOW_RANGE": "orange",
+        "LOW_SUSPICIOUS": "yellow",
+        "LOW_IMPOSSIBLE": "blue",
+        "HIGH": "red",
+        "VERY_HIGH": "darkred"
+    }
+)
+
+fig.update_yaxes(title_text="Temperatuur (°C)")
+fig.update_xaxes(title_text="Tijd")
+
+st.plotly_chart(fig, use_container_width=True)
+
+# ---------------------------------------------------------
+# ⭐ 10. QC SAMENVATTING – ONDER DE GRAFIEK
 # ---------------------------------------------------------
 
 laagste = df_dag["Raw Value"].min()
@@ -421,31 +463,3 @@ else:
     conclusie = "✔️ De gemeten waarden vallen binnen het normale bereik."
 
 st.markdown(f"### Conclusie\n{conclusie}")
-
-# ---------------------------------------------------------
-# 10. Grafiek tonen – MET QC-KLEUREN
-# ---------------------------------------------------------
-
-import plotly.express as px
-
-fig = px.line(
-    df_dag,
-    x="Timestamp",
-    y="Raw Value",
-    title=f"Temperatuurverloop op {gekozen_dag}",
-    markers=True,
-    color="QC_Flag",
-    color_discrete_map={
-        "OK": "green",
-        "LOW_RANGE": "orange",
-        "LOW_SUSPICIOUS": "yellow",
-        "LOW_IMPOSSIBLE": "blue",
-        "HIGH": "red",
-        "VERY_HIGH": "darkred"
-    }
-)
-
-fig.update_yaxes(title_text="Temperatuur (°C)")
-fig.update_xaxes(title_text="Tijd")
-
-st.plotly_chart(fig, use_container_width=True)
