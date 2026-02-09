@@ -471,3 +471,54 @@ if not df_maand.empty:
     - **Laagste waarde in de maand:** {laagste_maand}°C  
     - **Hoogste waarde in de maand:** {hoogste_maand}°C  
     """)
+    # ---------------------------------------------------------
+# ⭐ 12. MAAND-CONCLUSIE – GESCHIKTHEID VAN HET STATION
+# ---------------------------------------------------------
+
+if not df_maand.empty:
+
+    if laagste_maand < 5:
+        maand_conclusie = (
+            "❌ De maand bevat waarden onder 5°C. "
+            "Dit is fysiek onmogelijk voor Suriname. "
+            "Het station is NIET geschikt voor deze maand."
+        )
+
+    elif laagste_maand < 10:
+        maand_conclusie = (
+            "❌ De maand bevat zeer onrealistische lage waarden (<10°C). "
+            "Het station is NIET geschikt voor deze maand."
+        )
+
+    elif laagste_maand < 20:
+        maand_conclusie = (
+            "⚠️ De maand bevat lage waarden (<20°C) die niet typisch zijn voor Suriname. "
+            "Controle van het station wordt aanbevolen."
+        )
+
+    elif hoogste_maand > 45:
+        maand_conclusie = (
+            "❌ De maand bevat waarden boven 45°C. "
+            "Dit is fysiek onmogelijk. "
+            "Het station is NIET geschikt voor deze maand."
+        )
+
+    elif hoogste_maand > 40:
+        maand_conclusie = (
+            "❌ De maand bevat extreem hoge waarden (>40°C). "
+            "Het station is NIET geschikt voor deze maand."
+        )
+
+    elif hoogste_maand > 37:
+        maand_conclusie = (
+            "⚠️ De maand bevat zeer hoge waarden (>37°C). "
+            "Controle van het station wordt aanbevolen."
+        )
+
+    else:
+        maand_conclusie = (
+            "✔ Het station toont realistische waarden voor deze maand. "
+            "Het station is geschikt voor verdere analyse."
+        )
+
+    st.markdown(f"### Maandconclusie\n{maand_conclusie}")
