@@ -35,12 +35,31 @@ st.subheader(f"QC Rapport – {gekozen_dag}")
 # -----------------------------
 st.subheader("Ontbrekende metingen voor de dag!")
 
+# Raw Value numeriek maken
+df["Raw Value"] = pd.to_numeric(df["Raw Value"], errors="coerce")
+
+# Filter op gekozen dag
+df_dag = df[df['Timestamp'].dt.date == gekozen_dag].copy()
+
 # Verwachte timestamps
 start = pd.to_datetime(str(gekozen_dag) + " 00:00:00")
 expected_times = pd.date_range(start=start, periods=144, freq="10min")
 
 df_expected = pd.DataFrame({"Timestamp": expected_times})
-df_expected["Status"] = df_expected["Timestamp"].isin(df_dag["Timestamp"])
+
+# -----------------------------
+# ⭐ BELANGRIJKSTE FIX:
+# Status = True ALS er een echte Raw Value is
+# -----------------------------
+df_expected = df_expected.merge(
+    df_dag[["Timestamp", "Raw Value"]],
+    on="Timestamp",
+    how="left"
+)
+
+df_expected["Status"] = df_expected["Raw Value"].notna()
+
+# Uur + blok berekenen
 df_expected["Hour"] = df_expected["Timestamp"].dt.hour
 df_expected["Block"] = df_expected["Timestamp"].dt.minute // 10
 
@@ -62,7 +81,7 @@ for _, row in df_expected.iterrows():
 
     x = hour * (cell_size + gap)
     y = (5 - block) * (cell_size + gap)
-        
+
     fig.add_shape(
         type="rect",
         x0=x, x1=x + cell_size,
@@ -71,7 +90,7 @@ for _, row in df_expected.iterrows():
         fillcolor=color
     )
 
-# As-instellingen (BOLD labels)
+# As-instellingen
 fig.update_xaxes(
     title_text="<b>Uur van de dag</b>",
     title_font=dict(size=16),
@@ -115,19 +134,17 @@ st.markdown("**Legenda:** 🟩 Ontvangen meting   |   🟥 Ontbrekende meting")
 # -----------------------------
 st.subheader("QC")
 
-# Berekeningen
 totaal_blokken = 144
 aanwezig = df_expected["Status"].sum()
 ontbrekend = totaal_blokken - aanwezig
 percentage = round((aanwezig / totaal_blokken) * 100, 1)
 
-# Kwaliteitslabel
-if percentage >= 75:
-    kwaliteit = "Voldoende — dag voldoet aan de minimale eis."
-else:
-    kwaliteit = "Onvoldoende — minder dan 75% datacompleetheid."
+kwaliteit = (
+    "Voldoende — dag voldoet aan de minimale eis."
+    if percentage >= 75
+    else "Onvoldoende — minder dan 75% datacompleetheid."
+)
 
-# QC-tekst in een kader
 qc_html = f"""
 <div style="
     background-color:#f0f2f6;
@@ -142,13 +159,10 @@ qc_html = f"""
 <p><b>Datacompleetheid:</b> {percentage}%.</p>
 <p><b>Kwaliteit:</b> {kwaliteit}</p>
 <p>Minimaal <b>75%</b> van de datametingen moet aanwezig zijn om te voldoen aan de kwaliteitsnorm.</p>
-<p>Wanneer er veel rode blokken zichtbaar zijn, betekent dit dat het instrument tijdelijk geen gegevens heeft doorgestuurd. 
-Dit kan wijzen op een storing in de sensor, een probleem met de voeding, een communicatie‑onderbreking of een fout in de datalogger. 
-Hoe groter de datagaten, hoe lager de betrouwbaarheid van de metingen voor die dag.</p>
 </div>
 """
-st.markdown(qc_html, unsafe_allow_html=True)
 
+st.markdown(qc_html, unsafe_allow_html=True)
 # ---------------------------------------------------------
 # 3. MAANDOVERZICHT QC – TEMPERATUUR
 # ---------------------------------------------------------
