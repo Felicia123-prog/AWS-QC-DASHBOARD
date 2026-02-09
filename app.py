@@ -344,16 +344,35 @@ if df_dag.empty:
 # 6. Sorteren
 df_dag = df_dag.sort_values("Timestamp")
 
-# 7. Simpele QC (GEEN missing!)
+# ---------------------------------------------------------
+# ⭐ 7. QC INTERVALLEN – TROPISCH KLIMAAT (Stap 2)
+# ---------------------------------------------------------
+
 df_dag["QC_Flag"] = "OK"
-df_dag.loc[df_dag["Raw Value"] < 0, "QC_Flag"] = "LOW"
+
+# Onmogelijke waarden (<0°C)
+df_dag.loc[df_dag["Raw Value"] < 0, "QC_Flag"] = "LOW_IMPOSSIBLE"
+
+# Onrealistisch laag (0–5°C)
+df_dag.loc[(df_dag["Raw Value"] >= 0) & (df_dag["Raw Value"] < 5), "QC_Flag"] = "LOW_SUSPICIOUS"
+
+# Verdacht laag (5–10°C)
+df_dag.loc[(df_dag["Raw Value"] >= 5) & (df_dag["Raw Value"] < 10), "QC_Flag"] = "LOW_RANGE"
+
+# Onrealistisch hoog (>40°C)
 df_dag.loc[df_dag["Raw Value"] > 40, "QC_Flag"] = "HIGH"
 
+# ---------------------------------------------------------
 # 8. Tabel tonen
+# ---------------------------------------------------------
+
 st.write(f"Temperatuurmetingen op {gekozen_dag}:")
 st.dataframe(df_dag[["Timestamp", "Raw Value", "QC_Flag"]])
 
-# 9. Grafiek tonen
+# ---------------------------------------------------------
+# 9. Grafiek tonen – MET QC-KLEUREN
+# ---------------------------------------------------------
+
 import plotly.express as px
 
 fig = px.line(
@@ -365,9 +384,15 @@ fig = px.line(
     color="QC_Flag",
     color_discrete_map={
         "OK": "green",
-        "LOW": "blue",
+        "LOW_RANGE": "orange",
+        "LOW_SUSPICIOUS": "yellow",
+        "LOW_IMPOSSIBLE": "blue",
         "HIGH": "red"
     }
 )
+
+# As-labels
+fig.update_yaxes(title_text="Temperatuur (°C)")
+fig.update_xaxes(title_text="Tijd")
 
 st.plotly_chart(fig, use_container_width=True)
