@@ -265,29 +265,38 @@ st.markdown("""
 """)
 
 # ---------------------------------------------------------
-# 8. WINDROOS MET QC-KLEUREN
+# 8. PROFESSIONELE WINDROOS MET KLEUREN
 # ---------------------------------------------------------
+
+# Waarden afronden op hele graden
+df_dag["Raw Value"] = df_dag["Raw Value"].round(0).astype("Int64")
+
+# Frequentie per 10° sector
+df_dag["Sector"] = (df_dag["Raw Value"] // 10) * 10
+freq = df_dag.groupby(["Sector", "QC_Flag"]).size().reset_index(name="Count")
+
 fig = go.Figure()
 
-fig.add_trace(go.Barpolar(
-    r=[1]*len(df_dag),
-    theta=df_dag["Raw Value"],
-    marker_color=df_dag["QC_Flag"].map({
-        "OK": "green",
-        "OUT_OF_RANGE": "red"
-    }),
-    marker_line_color="black",
-    marker_line_width=1,
-    opacity=0.85
-))
+for qc, kleur in {
+    "OK": "green",
+    "OUT_OF_RANGE": "red"
+}.items():
+    subset = freq[freq["QC_Flag"] == qc]
+    fig.add_trace(go.Barpolar(
+        r=subset["Count"],
+        theta=subset["Sector"],
+        name=qc,
+        marker_color=kleur,
+        opacity=0.85
+    ))
 
 fig.update_layout(
     title=f"Windroos – {gekozen_dag}",
     polar=dict(
-        radialaxis=dict(showticklabels=False, ticks=''),
+        radialaxis=dict(showticklabels=True, ticks='outside'),
         angularaxis=dict(direction="clockwise", rotation=90)
     ),
-    showlegend=False
+    legend=dict(title="QC Status")
 )
 
 st.plotly_chart(fig, use_container_width=True)
@@ -372,3 +381,36 @@ if not df_maand.empty:
             )
 
     st.markdown(f"### Maandconclusie\n{maand_conclusie}")
+
+# ---------------------------------------------------------
+# 12. MAANDELIJKSE WINDROOS
+# ---------------------------------------------------------
+st.subheader("Maandelijkse Windroos")
+
+df_maand_valid = df_maand[df_maand["Raw Value"].between(0, 360)]
+
+if df_maand_valid.empty:
+    st.info("Geen geldige windrichtingwaarden beschikbaar voor deze maand.")
+else:
+    df_maand_valid["Sector"] = (df_maand_valid["Raw Value"] // 10) * 10
+    freq_m = df_maand_valid.groupby("Sector").size().reset_index(name="Count")
+
+    fig_m = go.Figure()
+
+    fig_m.add_trace(go.Barpolar(
+        r=freq_m["Count"],
+        theta=freq_m["Sector"],
+        marker_color="royalblue",
+        opacity=0.85
+    ))
+
+    fig_m.update_layout(
+        title=f"Maandelijkse Windroos – {gekozen_dag.strftime('%B %Y')}",
+        polar=dict(
+            radialaxis=dict(showticklabels=True, ticks='outside'),
+            angularaxis=dict(direction="clockwise", rotation=90)
+        ),
+        showlegend=False
+    )
+
+    st.plotly_chart(fig_m, use_container_width=True)
