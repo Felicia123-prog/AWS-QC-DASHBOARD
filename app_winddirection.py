@@ -239,8 +239,10 @@ df_dag["QC_Flag"] = "OK"
 df_dag.loc[(df_dag["Raw Value"] < 0) | (df_dag["Raw Value"] > 360), "QC_Flag"] = "OUT_OF_RANGE"
 
 # ---------------------------------------------------------
-# 7. TABEL MET KLEUREN
+# 7. TABEL MET KLEUREN + AFRONDING
 # ---------------------------------------------------------
+df_dag["Raw Value"] = df_dag["Raw Value"].round(0).astype("Int64")
+
 def highlight_qc(val):
     colors = {
         "OK": "background-color: #b6f2b6",
@@ -253,6 +255,7 @@ st.dataframe(
     df_dag[["Timestamp", "Raw Value", "QC_Flag"]]
     .style
     .applymap(highlight_qc, subset=["QC_Flag"])
+    .format({"Raw Value": "{:.0f}"})
 )
 
 st.markdown("""
@@ -262,23 +265,30 @@ st.markdown("""
 """)
 
 # ---------------------------------------------------------
-# 8. GRAFIEK MET QC-KLEUREN
+# 8. WINDROOS MET QC-KLEUREN
 # ---------------------------------------------------------
-fig = px.line(
-    df_dag,
-    x="Timestamp",
-    y="Raw Value",
-    title=f"Windrichtingverloop op {gekozen_dag}",
-    markers=True,
-    color="QC_Flag",
-    color_discrete_map={
+fig = go.Figure()
+
+fig.add_trace(go.Barpolar(
+    r=[1]*len(df_dag),
+    theta=df_dag["Raw Value"],
+    marker_color=df_dag["QC_Flag"].map({
         "OK": "green",
         "OUT_OF_RANGE": "red"
-    }
-)
+    }),
+    marker_line_color="black",
+    marker_line_width=1,
+    opacity=0.85
+))
 
-fig.update_yaxes(title_text="Windrichting (°)")
-fig.update_xaxes(title_text="Tijd")
+fig.update_layout(
+    title=f"Windroos – {gekozen_dag}",
+    polar=dict(
+        radialaxis=dict(showticklabels=False, ticks=''),
+        angularaxis=dict(direction="clockwise", rotation=90)
+    ),
+    showlegend=False
+)
 
 st.plotly_chart(fig, use_container_width=True)
 
