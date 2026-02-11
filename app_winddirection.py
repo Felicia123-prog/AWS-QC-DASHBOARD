@@ -383,7 +383,7 @@ if not df_maand.empty:
     st.markdown(f"### Maandconclusie\n{maand_conclusie}")
 
 # ---------------------------------------------------------
-# 12. MAANDELIJKSE WINDROOS
+# 12. MAANDELIJKSE WINDROOS MET DOMINANTE RICHTING + N/E/S/W
 # ---------------------------------------------------------
 st.subheader("Maandelijkse Windroos")
 
@@ -392,17 +392,57 @@ df_maand_valid = df_maand[df_maand["Raw Value"].between(0, 360)]
 if df_maand_valid.empty:
     st.info("Geen geldige windrichtingwaarden beschikbaar voor deze maand.")
 else:
+    # Sectoren van 10 graden
     df_maand_valid["Sector"] = (df_maand_valid["Raw Value"] // 10) * 10
     freq_m = df_maand_valid.groupby("Sector").size().reset_index(name="Count")
 
+    # Dominante richting bepalen
+    dominante_sector = freq_m.loc[freq_m["Count"].idxmax(), "Sector"]
+
     fig_m = go.Figure()
 
+    # Windroos balken
     fig_m.add_trace(go.Barpolar(
         r=freq_m["Count"],
         theta=freq_m["Sector"],
         marker_color="royalblue",
-        opacity=0.85
+        opacity=0.85,
+        name="Frequentie"
     ))
+
+    # Dominante richting pijl
+    fig_m.add_trace(go.Scatterpolar(
+        r=[freq_m["Count"].max() * 1.2],
+        theta=[dominante_sector],
+        mode="lines",
+        line=dict(color="red", width=4),
+        name="Dominante richting"
+    ))
+
+    # Cardinal directions
+    cardinal_labels = {
+        0: "N",
+        45: "NE",
+        90: "E",
+        135: "SE",
+        180: "S",
+        225: "SW",
+        270: "W",
+        315: "NW"
+    }
+
+    for angle, label in cardinal_labels.items():
+        fig_m.add_annotation(
+            x=0.5, y=0.5,
+            text=label,
+            showarrow=False,
+            font=dict(size=14, color="black"),
+            xref="paper", yref="paper",
+            xanchor="center", yanchor="center",
+            axref="pixel", ayref="pixel",
+            ax=np.cos(np.radians(angle)) * 180,
+            ay=np.sin(np.radians(angle)) * 180
+        )
 
     fig_m.update_layout(
         title=f"Maandelijkse Windroos – {gekozen_dag.strftime('%B %Y')}",
@@ -410,7 +450,7 @@ else:
             radialaxis=dict(showticklabels=True, ticks='outside'),
             angularaxis=dict(direction="clockwise", rotation=90)
         ),
-        showlegend=False
+        showlegend=True
     )
 
     st.plotly_chart(fig_m, use_container_width=True)
