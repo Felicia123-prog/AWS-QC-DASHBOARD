@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
+import plotly.express as px
 
 st.title("AWS QC Dashboard – Windrichting (Raw Value)")
 
@@ -14,41 +15,37 @@ station = st.selectbox("Kies een station", stations)
 
 # 📄 Automatisch windrichting-bestand kiezen
 station_path = os.path.join(data_path, station)
-wind_file = "Wind_Dir_Averagedeg_QC.xlsx"   # <-- JUISTE BESTANDSNAAM
+wind_file = "Wind_Dir_Averagedeg_QC.xlsx"
 file_path = os.path.join(station_path, wind_file)
 
 df = pd.read_excel(file_path)
 
 # Combineer Dag + Tijd
-df['Timestamp'] = pd.to_datetime(df['Dag'].astype(str) + ' ' + df['Tijd'].astype(str))
-df = df.sort_values('Timestamp')
+df["Timestamp"] = pd.to_datetime(df["Dag"].astype(str) + " " + df["Tijd"].astype(str))
+df = df.sort_values("Timestamp")
 
 # 📅 Dagselectie
-alle_dagen = sorted(df['Timestamp'].dt.date.unique())
+alle_dagen = sorted(df["Timestamp"].dt.date.unique())
 gekozen_dag = st.selectbox("Kies een dag", alle_dagen)
 
-df_dag = df[df['Timestamp'].dt.date == gekozen_dag]
+df_dag = df[df["Timestamp"].dt.date == gekozen_dag]
 
 st.subheader(f"QC Rapport – {gekozen_dag}")
 
-# -----------------------------
-# 1. CUSTOM BLOCKS TIMELINE (precies zoals temperatuur)
-# -----------------------------
+# ---------------------------------------------------------
+# 1. CUSTOM BLOCKS TIMELINE – MISSING DETECTIE
+# ---------------------------------------------------------
 st.subheader("Ontbrekende metingen voor de dag!")
 
-# Raw Value numeriek maken
 df["Raw Value"] = pd.to_numeric(df["Raw Value"], errors="coerce")
 
-# Filter op gekozen dag
-df_dag = df[df['Timestamp'].dt.date == gekozen_dag].copy()
+df_dag = df[df["Timestamp"].dt.date == gekozen_dag].copy()
 
-# Verwachte timestamps
 start = pd.to_datetime(str(gekozen_dag) + " 00:00:00")
 expected_times = pd.date_range(start=start, periods=144, freq="10min")
 
 df_expected = pd.DataFrame({"Timestamp": expected_times})
 
-# Status = True ALS er een echte Raw Value is
 df_expected = df_expected.merge(
     df_dag[["Timestamp", "Raw Value"]],
     on="Timestamp",
@@ -57,11 +54,9 @@ df_expected = df_expected.merge(
 
 df_expected["Status"] = df_expected["Raw Value"].notna()
 
-# Uur + blok berekenen
 df_expected["Hour"] = df_expected["Timestamp"].dt.hour
 df_expected["Block"] = df_expected["Timestamp"].dt.minute // 10
 
-# Raster parameters
 cell_size = 30
 gap = 5
 rows = 6
@@ -69,7 +64,6 @@ cols = 24
 
 fig = go.Figure()
 
-# Blokjes tekenen
 for _, row in df_expected.iterrows():
     hour = row["Hour"]
     block = row["Block"]
@@ -88,7 +82,6 @@ for _, row in df_expected.iterrows():
         fillcolor=color
     )
 
-# As-instellingen
 fig.update_xaxes(
     title_text="<b>Uur van de dag</b>",
     title_font=dict(size=16),
@@ -122,26 +115,250 @@ fig.update_layout(
 
 st.plotly_chart(fig, use_container_width=True)
 
-# -----------------------------
-# LEGENDA
-# -----------------------------
-st.markdown("**Legenda:** 🟩 Ontvangen meting   |   🟥 Ontbrekende meting")
+st.markdown("**Legenda:** 🟩 Ontvangen meting   |   🟥 Ontbrekende meting**")
 
-# -----------------------------
-# 2. QC-REGELS (precies zoals temperatuur)
-# -----------------------------
-st.subheader("QC Analyse – Windrichting")
+# ---------------------------------------------------------
+# 2. QC SAMENVATTING – DAG
+# ---------------------------------------------------------
+st.subheader("QC")
 
-df_dag["QC_Flag"] = np.where(
-    df_dag["Raw Value"].between(0, 360, inclusive="both"),
-    "OK",
-    "FOUT"
+totaal_blokken = 144
+aanwezig = df_expected["Status"].sum()
+ontbrekend = totaal_blokken - aanwezig
+percentage = round((aanwezig / totaal_blokken) * 100, 1)
+
+kwaliteit = (
+    "Voldoende — dag voldoet aan de minimale eis."
+    if percentage >= 75
+    else "Onvoldoende — minder dan 75% datacompleetheid."
 )
 
-df_dag["Cleaned Value"] = np.where(
-    df_dag["QC_Flag"] == "OK",
-    df_dag["Raw Value"],
-    np.nan
+qc_html = f"""
+<div style="
+    background-color:#f0f2f6;
+    padding:18px;
+    border-radius:10px;
+    border-left:6px solid #4a90e2;
+    font-size:16px;
+">
+<p>Windrichting wordt elke 10 minuten gemeten en geregistreerd.</p>
+<p>In totaal moeten er <b>144 metingen</b> zijn per dag.</p>
+<p><b>Ontbrekende metingen:</b> {ontbrekend} van de 144.</p>
+<p><b>Datacompleetheid:</b> {percentage}%.</p>
+<p><b>Kwaliteit:</b> {kwaliteit}</p>
+<p>Minimaal <b>75%</b> van de datametingen moet aanwezig zijn om te voldoen aan de kwaliteitsnorm.</p>
+</div>
+"""
+
+st.markdown(qc_html, unsafe_allow_html=True)
+
+# ---------------------------------------------------------
+# 3. MAANDOVERZICHT QC
+# ---------------------------------------------------------
+st.subheader("Maandelijkse QC – Windrichting")
+
+qc_resultaten = []
+
+for dag in alle_dagen:
+    df_dag = df[df["Timestamp"].dt.date == dag].copy()
+    df_dag["Raw Value"] = pd.to_numeric(df_dag["Raw Value"], errors="coerce")
+    aanwezig = df_dag["Raw Value"].notna().sum()
+    totaal = 144
+    percentage = round((aanwezig / totaal) * 100, 1)
+    status = "goed" if percentage >= 75 else "slecht"
+
+    qc_resultaten.append({
+        "Dag": dag,
+        "Aanwezig": aanwezig,
+        "Percentage": percentage,
+        "Status": status
+    })
+
+qc_df = pd.DataFrame(qc_resultaten)
+
+# ---------------------------------------------------------
+# 4. GRAFIEK MAANDOVERZICHT
+# ---------------------------------------------------------
+fig2 = go.Figure()
+
+cell_size = 40
+gap = 10
+
+for i, row in qc_df.iterrows():
+    kleur = "green" if row["Status"] == "goed" else "red"
+
+    x0 = i * (cell_size + gap)
+    x1 = x0 + cell_size
+
+    fig2.add_shape(
+        type="rect",
+        x0=x0, x1=x1,
+        y0=0, y1=cell_size,
+        line=dict(width=0),
+        fillcolor=kleur
+    )
+
+    fig2.add_annotation(
+        x=x0 + cell_size/2,
+        y=cell_size/2,
+        text=str(row["Dag"].day),
+        showarrow=False,
+        font=dict(color="white", size=14)
+    )
+
+fig2.update_xaxes(visible=False, range=[0, len(qc_df) * (cell_size + gap)])
+fig2.update_yaxes(visible=False, range=[0, cell_size])
+fig2.update_layout(height=150, margin=dict(l=20, r=20, t=20, b=20), plot_bgcolor="white")
+
+st.plotly_chart(fig2, use_container_width=True)
+
+st.markdown("**Legenda:** 🟩 Geschikte dag (≥75% compleet)   |   🟥 Ongeschikte dag (<75% compleet)**")
+
+# ---------------------------------------------------------
+# 5. GEREGISTREERDE METINGEN & QC
+# ---------------------------------------------------------
+st.subheader("Geregistreerde Windrichtingmetingen & Datakwaliteit")
+
+df["Tijd"] = df["Tijd"].astype(str).str.strip()
+df["Timestamp"] = pd.to_datetime(df["Dag"].astype(str) + " " + df["Tijd"].astype(str), errors="coerce")
+df["Raw Value"] = pd.to_numeric(df["Raw Value"], errors="coerce")
+
+df_dag = df[df["Timestamp"].dt.date == gekozen_dag].copy()
+df_dag = df_dag[df_dag["Raw Value"].notna()]
+
+if df_dag.empty:
+    st.warning(f"Er zijn geen windrichtingmetingen beschikbaar voor {gekozen_dag}.")
+    st.stop()
+
+df_dag = df_dag.sort_values("Timestamp")
+
+# ---------------------------------------------------------
+# 6. QC REGELS – WINDRICHTING (0–360°)
+# ---------------------------------------------------------
+df_dag["QC_Flag"] = "OK"
+df_dag.loc[(df_dag["Raw Value"] < 0) | (df_dag["Raw Value"] > 360), "QC_Flag"] = "OUT_OF_RANGE"
+
+# ---------------------------------------------------------
+# 7. TABEL MET KLEUREN
+# ---------------------------------------------------------
+def highlight_qc(val):
+    colors = {
+        "OK": "background-color: #b6f2b6",
+        "OUT_OF_RANGE": "background-color: #ff8a80"
+    }
+    return colors.get(val, "")
+
+st.write(f"Windrichtingmetingen op {gekozen_dag}:")
+st.dataframe(
+    df_dag[["Timestamp", "Raw Value", "QC_Flag"]]
+    .style
+    .applymap(highlight_qc, subset=["QC_Flag"])
 )
 
-st.dataframe(df_dag)
+st.markdown("""
+### Legenda datakwaliteit
+- 🟩 **OK** — Geldige windrichting (0–360°)  
+- 🟥 **OUT_OF_RANGE** — Ongeldige waarde (buiten 0–360°)  
+""")
+
+# ---------------------------------------------------------
+# 8. GRAFIEK MET QC-KLEUREN
+# ---------------------------------------------------------
+fig = px.line(
+    df_dag,
+    x="Timestamp",
+    y="Raw Value",
+    title=f"Windrichtingverloop op {gekozen_dag}",
+    markers=True,
+    color="QC_Flag",
+    color_discrete_map={
+        "OK": "green",
+        "OUT_OF_RANGE": "red"
+    }
+)
+
+fig.update_yaxes(title_text="Windrichting (°)")
+fig.update_xaxes(title_text="Tijd")
+
+st.plotly_chart(fig, use_container_width=True)
+
+# ---------------------------------------------------------
+# 9. QC SAMENVATTING – DAG
+# ---------------------------------------------------------
+laagste = df_dag["Raw Value"].min()
+hoogste = df_dag["Raw Value"].max()
+qc_counts = df_dag["QC_Flag"].value_counts()
+
+st.markdown(f"""
+### Samenvatting datakwaliteit
+- **Laagste waarde:** {laagste}°  
+- **Hoogste waarde:** {hoogste}°  
+- **Aantal OUT_OF_RANGE:** {qc_counts.get('OUT_OF_RANGE', 0)}  
+""")
+
+if qc_counts.get("OUT_OF_RANGE", 0) > 0:
+    conclusie = "❌ De dag bevat ongeldige windrichtingwaarden (buiten 0–360°)."
+else:
+    conclusie = "✔️ Alle waarden vallen binnen het geldige bereik."
+
+st.markdown(f"### Dagconclusie\n{conclusie}")
+
+# ---------------------------------------------------------
+# 10. MAANDSTATISTIEKEN – WINDRICHTING
+# ---------------------------------------------------------
+maand = gekozen_dag.month
+jaar = gekozen_dag.year
+
+df_maand = df[
+    (df["Timestamp"].dt.month == maand) &
+    (df["Timestamp"].dt.year == jaar)
+].copy()
+
+df_maand = df_maand[df_maand["Raw Value"].notna()]
+
+if not df_maand.empty:
+
+    totaal_waarden = len(df_maand)
+    fout_count = ((df_maand["Raw Value"] < 0) | (df_maand["Raw Value"] > 360)).sum()
+    fout_percentage = (fout_count / totaal_waarden) * 100
+
+    laagste_maand = df_maand["Raw Value"].min()
+    hoogste_maand = df_maand["Raw Value"].max()
+
+    st.markdown(f"""
+    ### Maandstatistieken ({gekozen_dag.strftime('%B %Y')})
+    - **Aantal ongeldige waarden:** {fout_count}  
+    - **Percentage ongeldige waarden:** {fout_percentage:.1f}%  
+    - **Laagste waarde in de maand:** {laagste_maand}°  
+    - **Hoogste waarde in de maand:** {hoogste_maand}°  
+    """)
+
+    # ---------------------------------------------------------
+    # 11. MAANDCONCLUSIE
+    # ---------------------------------------------------------
+    problemen = []
+
+    if fout_percentage >= 50:
+        maand_conclusie = (
+            "❌ Meer dan 50% van de maandwaarden is ongeldig. "
+            "De data is NIET geschikt voor analyse."
+        )
+    else:
+        if fout_count > 0:
+            problemen.append(
+                f"Er zijn {fout_count} ongeldige waarden gevonden. "
+                "Filter deze uit voordat je de data verder gebruikt."
+            )
+
+        if problemen:
+            maand_conclusie = (
+                "⚠️ De data bevat aandachtspunten. Gebruik de data alleen na filtering.\n\n"
+                + "\n".join(f"- {p}" for p in problemen)
+            )
+        else:
+            maand_conclusie = (
+                "✔ Het station toont geldige windrichtingwaarden voor deze maand. "
+                "Het station is geschikt voor verdere analyse."
+            )
+
+    st.markdown(f"### Maandconclusie\n{maand_conclusie}")
