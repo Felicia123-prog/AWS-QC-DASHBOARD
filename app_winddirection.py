@@ -412,37 +412,26 @@ else:
 
     # Dominante richting pijl
     fig_m.add_trace(go.Scatterpolar(
-        r=[freq_m["Count"].max() * 1.2],
+        r=[freq_m["Count"].max() * 1.3],
         theta=[dominante_sector],
         mode="lines",
         line=dict(color="red", width=4),
         name="Dominante richting"
     ))
 
-    # Cardinal directions
-    cardinal_labels = {
-        0: "N",
-        45: "NE",
-        90: "E",
-        135: "SE",
-        180: "S",
-        225: "SW",
-        270: "W",
-        315: "NW"
-    }
+    # Cardinal directions (N, NE, E, SE, S, SW, W, NW)
+    cardinal_angles = [0, 45, 90, 135, 180, 225, 270, 315]
+    cardinal_labels = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 
-    for angle, label in cardinal_labels.items():
-        fig_m.add_annotation(
-            x=0.5, y=0.5,
-            text=label,
-            showarrow=False,
-            font=dict(size=14, color="black"),
-            xref="paper", yref="paper",
-            xanchor="center", yanchor="center",
-            axref="pixel", ayref="pixel",
-            ax=np.cos(np.radians(angle)) * 180,
-            ay=np.sin(np.radians(angle)) * 180
-        )
+    for angle, label in zip(cardinal_angles, cardinal_labels):
+        fig_m.add_trace(go.Scatterpolar(
+            r=[freq_m["Count"].max() * 1.5],
+            theta=[angle],
+            mode="text",
+            text=[label],
+            textfont=dict(size=14, color="black"),
+            showlegend=False
+        ))
 
     fig_m.update_layout(
         title=f"Maandelijkse Windroos – {gekozen_dag.strftime('%B %Y')}",
