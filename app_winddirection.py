@@ -265,41 +265,79 @@ st.markdown("""
 """)
 
 # ---------------------------------------------------------
-# 8. PROFESSIONELE WINDROOS MET KLEUREN
+# 8. PREMIUM WINDROOS – DAG
 # ---------------------------------------------------------
 
 # Waarden afronden op hele graden
 df_dag["Raw Value"] = df_dag["Raw Value"].round(0).astype("Int64")
 
-# Frequentie per 10° sector
+# Sectoren van 10 graden
 df_dag["Sector"] = (df_dag["Raw Value"] // 10) * 10
-freq = df_dag.groupby(["Sector", "QC_Flag"]).size().reset_index(name="Count")
+freq_dag = df_dag.groupby("Sector").size().reset_index(name="Count")
 
-fig = go.Figure()
+# Dominante richting
+dominante_sector_dag = freq_dag.loc[freq_dag["Count"].idxmax(), "Sector"]
 
-for qc, kleur in {
-    "OK": "green",
-    "OUT_OF_RANGE": "red"
-}.items():
-    subset = freq[freq["QC_Flag"] == qc]
-    fig.add_trace(go.Barpolar(
-        r=subset["Count"],
-        theta=subset["Sector"],
-        name=qc,
-        marker_color=kleur,
-        opacity=0.85
+# Kleurintensiteit op basis van frequentie
+max_count = freq_dag["Count"].max()
+freq_dag["Color"] = freq_dag["Count"] / max_count  # schaal 0–1
+
+fig_d = go.Figure()
+
+fig_d.add_trace(go.Barpolar(
+    r=freq_dag["Count"],
+    theta=freq_dag["Sector"],
+    marker=dict(
+        color=freq_dag["Color"],
+        colorscale="Blues",
+        cmin=0,
+        cmax=1
+    ),
+    opacity=0.9,
+    name="Frequentie"
+))
+
+# Dominante richting pijl
+fig_d.add_trace(go.Scatterpolar(
+    r=[max_count * 1.3],
+    theta=[dominante_sector_dag],
+    mode="lines",
+    line=dict(color="red", width=4),
+    name="Dominante richting"
+))
+
+# Cardinal directions
+cardinal_angles = [0, 45, 90, 135, 180, 225, 270, 315]
+cardinal_labels = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+
+for angle, label in zip(cardinal_angles, cardinal_labels):
+    fig_d.add_trace(go.Scatterpolar(
+        r=[max_count * 1.5],
+        theta=[angle],
+        mode="text",
+        text=[label],
+        textfont=dict(size=14, color="black"),
+        showlegend=False
     ))
 
-fig.update_layout(
+fig_d.update_layout(
     title=f"Windroos – {gekozen_dag}",
     polar=dict(
         radialaxis=dict(showticklabels=True, ticks='outside'),
         angularaxis=dict(direction="clockwise", rotation=90)
     ),
-    legend=dict(title="QC Status")
+    showlegend=True
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig_d, use_container_width=True)
+
+# Tekstuele samenvatting
+st.markdown(f"""
+### Dagelijkse Windrichting Samenvatting
+- **Dominante richting:** {dominante_sector_dag}°  
+- **Frequentste sector:** {dominante_sector_dag}° – {dominante_sector_dag+10}°  
+- **Aantal metingen in dominante sector:** {freq_dag['Count'].max()}  
+""")
 
 # ---------------------------------------------------------
 # 9. QC SAMENVATTING – DAG
@@ -383,7 +421,7 @@ if not df_maand.empty:
     st.markdown(f"### Maandconclusie\n{maand_conclusie}")
 
 # ---------------------------------------------------------
-# 12. MAANDELIJKSE WINDROOS
+# 12. PREMIUM WINDROOS – MAAND
 # ---------------------------------------------------------
 st.subheader("Maandelijkse Windroos")
 
@@ -395,14 +433,46 @@ else:
     df_maand_valid["Sector"] = (df_maand_valid["Raw Value"] // 10) * 10
     freq_m = df_maand_valid.groupby("Sector").size().reset_index(name="Count")
 
+    dominante_sector = freq_m.loc[freq_m["Count"].idxmax(), "Sector"]
+
+    max_count_m = freq_m["Count"].max()
+    freq_m["Color"] = freq_m["Count"] / max_count_m
+
     fig_m = go.Figure()
 
     fig_m.add_trace(go.Barpolar(
         r=freq_m["Count"],
         theta=freq_m["Sector"],
-        marker_color="royalblue",
-        opacity=0.85
+        marker=dict(
+            color=freq_m["Color"],
+            colorscale="Blues",
+            cmin=0,
+            cmax=1
+        ),
+        opacity=0.9,
+        name="Frequentie"
     ))
+
+    fig_m.add_trace(go.Scatterpolar(
+        r=[max_count_m * 1.3],
+        theta=[dominante_sector],
+        mode="lines",
+        line=dict(color="red", width=4),
+        name="Dominante richting"
+    ))
+
+    cardinal_angles = [0, 45, 90, 135, 180, 225, 270, 315]
+    cardinal_labels = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+
+    for angle, label in zip(cardinal_angles, cardinal_labels):
+        fig_m.add_trace(go.Scatterpolar(
+            r=[max_count_m * 1.5],
+            theta=[angle],
+            mode="text",
+            text=[label],
+            textfont=dict(size=14, color="black"),
+            showlegend=False
+        ))
 
     fig_m.update_layout(
         title=f"Maandelijkse Windroos – {gekozen_dag.strftime('%B %Y')}",
@@ -410,7 +480,14 @@ else:
             radialaxis=dict(showticklabels=True, ticks='outside'),
             angularaxis=dict(direction="clockwise", rotation=90)
         ),
-        showlegend=False
+        showlegend=True
     )
 
     st.plotly_chart(fig_m, use_container_width=True)
+
+    st.markdown(f"""
+    ### Maandelijkse Windrichting Samenvatting
+    - **Dominante richting:** {dominante_sector}°  
+    - **Frequentste sector:** {dominante_sector}° – {dominante_sector+10}°  
+    - **Aantal metingen in dominante sector:** {freq_m['Count'].max()}  
+    """)
