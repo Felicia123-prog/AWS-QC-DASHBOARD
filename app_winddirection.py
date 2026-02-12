@@ -383,7 +383,7 @@ if not df_maand.empty:
     st.markdown(f"### Maandconclusie\n{maand_conclusie}")
 
 # ---------------------------------------------------------
-# 12. MAANDELIJKSE WINDROOS MET DOMINANTE RICHTING + N/E/S/W
+# 12. MAANDELIJKSE WINDROOS
 # ---------------------------------------------------------
 st.subheader("Maandelijkse Windroos")
 
@@ -392,46 +392,17 @@ df_maand_valid = df_maand[df_maand["Raw Value"].between(0, 360)]
 if df_maand_valid.empty:
     st.info("Geen geldige windrichtingwaarden beschikbaar voor deze maand.")
 else:
-    # Sectoren van 10 graden
     df_maand_valid["Sector"] = (df_maand_valid["Raw Value"] // 10) * 10
     freq_m = df_maand_valid.groupby("Sector").size().reset_index(name="Count")
 
-    # Dominante richting bepalen
-    dominante_sector = freq_m.loc[freq_m["Count"].idxmax(), "Sector"]
-
     fig_m = go.Figure()
 
-    # Windroos balken
     fig_m.add_trace(go.Barpolar(
         r=freq_m["Count"],
         theta=freq_m["Sector"],
         marker_color="royalblue",
-        opacity=0.85,
-        name="Frequentie"
+        opacity=0.85
     ))
-
-    # Dominante richting pijl
-    fig_m.add_trace(go.Scatterpolar(
-        r=[freq_m["Count"].max() * 1.3],
-        theta=[dominante_sector],
-        mode="lines",
-        line=dict(color="red", width=4),
-        name="Dominante richting"
-    ))
-
-    # Cardinal directions (N, NE, E, SE, S, SW, W, NW)
-    cardinal_angles = [0, 45, 90, 135, 180, 225, 270, 315]
-    cardinal_labels = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-
-    for angle, label in zip(cardinal_angles, cardinal_labels):
-        fig_m.add_trace(go.Scatterpolar(
-            r=[freq_m["Count"].max() * 1.5],
-            theta=[angle],
-            mode="text",
-            text=[label],
-            textfont=dict(size=14, color="black"),
-            showlegend=False
-        ))
 
     fig_m.update_layout(
         title=f"Maandelijkse Windroos – {gekozen_dag.strftime('%B %Y')}",
@@ -439,7 +410,7 @@ else:
             radialaxis=dict(showticklabels=True, ticks='outside'),
             angularaxis=dict(direction="clockwise", rotation=90)
         ),
-        showlegend=True
+        showlegend=False
     )
 
     st.plotly_chart(fig_m, use_container_width=True)
