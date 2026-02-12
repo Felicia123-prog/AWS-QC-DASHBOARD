@@ -319,6 +319,28 @@ fig_d.update_layout(
 )
 
 st.plotly_chart(fig_d, use_container_width=True)
+# Uitleg windroos
+st.markdown("""
+### Uitleg Windroos
+De windroos toont **hoe vaak** de wind uit elke richting heeft gewaaid.
+
+- **Blauwe balken**: geven de **frequentie** weer.  
+  - Hoe **langer** de balk, hoe **vaker** de wind uit die richting kwam.  
+  - Hoe **donkerder** de kleur, hoe **hoger** de frequentie.
+
+- De cirkel is verdeeld in **sectoren van 10°** (0°, 10°, 20°, … 350°).
+
+- De labels **N, NE, E, SE, S, SW, W, NW** geven de **windrichtingen** aan.
+
+- De windroos gebruikt **alle individuele metingen** van de dag.  
+  Er wordt **geen gemiddelde windrichting** berekend, omdat dat meteorologisch niet correct is.
+""")
+
+# Tekstuele samenvatting
+st.markdown(f"""
+### Dagelijkse Windrichting Samenvatting
+...
+""")
 
 # ---------------------------------------------------------
 # 9. QC SAMENVATTING – DAG
@@ -457,3 +479,24 @@ else:
     )
 
     st.plotly_chart(fig_m, use_container_width=True)
+# Uitleg windroos
+st.markdown("""
+### Uitleg Windroos
+De windroos toont **hoe vaak** de wind uit elke richting heeft gewaaid.
+
+- **Blauwe balken**: geven de **frequentie** weer.  
+  - Hoe **langer** de balk, hoe **vaker** de wind uit die richting kwam.  
+  - Hoe **donkerder** de kleur, hoe **hoger** de frequentie.
+
+- De cirkel is verdeeld in **sectoren van 10°** (0°, 10°, 20°, … 350°).
+
+- De labels **N, NE, E, SE, S, SW, W, NW** geven de **windrichtingen** aan.
+
+- De windroos gebruikt **alle individuele metingen** van de maand.  
+  Er wordt **geen gemiddelde windrichting** berekend, omdat dat meteorologisch niet correct is.
+""")
+
+st.markdown(f"""
+### Maandelijkse Windrichting Samenvatting
+...
+""")
