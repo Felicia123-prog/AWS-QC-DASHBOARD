@@ -279,11 +279,12 @@ freq_dag = df_dag.groupby("Sector").size().reset_index(name="Count")
 dominante_sector_dag = freq_dag.loc[freq_dag["Count"].idxmax(), "Sector"]
 
 # Kleurintensiteit op basis van frequentie
-max_count = freq_dag["Count"].max()
-freq_dag["Color"] = freq_dag["Count"] / max_count  # schaal 0–1
+max_count_dag = freq_dag["Count"].max()
+freq_dag["Color"] = freq_dag["Count"] / max_count_dag
 
 fig_d = go.Figure()
 
+# Balken met kleurgradatie
 fig_d.add_trace(go.Barpolar(
     r=freq_dag["Count"],
     theta=freq_dag["Sector"],
@@ -297,12 +298,13 @@ fig_d.add_trace(go.Barpolar(
     name="Frequentie"
 ))
 
-# Dominante richting pijl
+# Dominante richting pijl (ALTIJD zichtbaar)
 fig_d.add_trace(go.Scatterpolar(
-    r=[max_count * 1.3],
-    theta=[dominante_sector_dag],
-    mode="lines",
-    line=dict(color="red", width=4),
+    r=[max_count_dag * 1.8, max_count_dag * 2.2],
+    theta=[dominante_sector_dag, dominante_sector_dag],
+    mode="lines+markers",
+    line=dict(color="red", width=6),
+    marker=dict(size=12, color="red"),
     name="Dominante richting"
 ))
 
@@ -312,7 +314,7 @@ cardinal_labels = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 
 for angle, label in zip(cardinal_angles, cardinal_labels):
     fig_d.add_trace(go.Scatterpolar(
-        r=[max_count * 1.5],
+        r=[max_count_dag * 2.4],
         theta=[angle],
         mode="text",
         text=[label],
@@ -323,7 +325,7 @@ for angle, label in zip(cardinal_angles, cardinal_labels):
 fig_d.update_layout(
     title=f"Windroos – {gekozen_dag}",
     polar=dict(
-        radialaxis=dict(showticklabels=True, ticks='outside'),
+        radialaxis=dict(showticklabels=True, ticks='outside', range=[0, max_count_dag * 2.5]),
         angularaxis=dict(direction="clockwise", rotation=90)
     ),
     showlegend=True
@@ -440,6 +442,7 @@ else:
 
     fig_m = go.Figure()
 
+    # Balken met kleurgradatie
     fig_m.add_trace(go.Barpolar(
         r=freq_m["Count"],
         theta=freq_m["Sector"],
@@ -453,20 +456,23 @@ else:
         name="Frequentie"
     ))
 
+    # Dominante richting pijl (ALTIJD zichtbaar)
     fig_m.add_trace(go.Scatterpolar(
-        r=[max_count_m * 1.3],
-        theta=[dominante_sector],
-        mode="lines",
-        line=dict(color="red", width=4),
+        r=[max_count_m * 1.8, max_count_m * 2.2],
+        theta=[dominante_sector, dominante_sector],
+        mode="lines+markers",
+        line=dict(color="red", width=6),
+        marker=dict(size=12, color="red"),
         name="Dominante richting"
     ))
 
+    # Cardinal directions
     cardinal_angles = [0, 45, 90, 135, 180, 225, 270, 315]
     cardinal_labels = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 
     for angle, label in zip(cardinal_angles, cardinal_labels):
         fig_m.add_trace(go.Scatterpolar(
-            r=[max_count_m * 1.5],
+            r=[max_count_m * 2.4],
             theta=[angle],
             mode="text",
             text=[label],
@@ -477,7 +483,7 @@ else:
     fig_m.update_layout(
         title=f"Maandelijkse Windroos – {gekozen_dag.strftime('%B %Y')}",
         polar=dict(
-            radialaxis=dict(showticklabels=True, ticks='outside'),
+            radialaxis=dict(showticklabels=True, ticks='outside', range=[0, max_count_m * 2.5]),
             angularaxis=dict(direction="clockwise", rotation=90)
         ),
         showlegend=True
